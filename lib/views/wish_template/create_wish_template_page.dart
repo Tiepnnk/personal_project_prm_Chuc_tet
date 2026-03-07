@@ -1,27 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:personal_project_prm/di.dart';
+import 'package:personal_project_prm/domain/entities/wish_template.dart';
+import 'package:personal_project_prm/viewmodels/wish_template/create_wish_template_viewmodel.dart';
 
-class CreateWishTemplatePage extends StatefulWidget {
-  const CreateWishTemplatePage({super.key});
+class CreateWishTemplatePage extends StatelessWidget {
+  final WishTemplate? templateToEdit;
 
-  @override
-  State<CreateWishTemplatePage> createState() => _CreateWishTemplatePageState();
-}
-
-class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
-  // Biến trạng thái UI
-  bool _showTitleError = false; // Demo validate
-  final int _maxContentLength = 500;
-  int _currentContentLength = 0;
-  
-  // Dữ liệu mock
-  final List<String> _groups = ['Gia đình', 'Bạn bè', 'Đồng nghiệp', 'Sếp', 'Đối tác'];
-  final Set<String> _selectedGroups = {'Gia đình'};
-  bool _isFavorite = true;
+  const CreateWishTemplatePage({super.key, this.templateToEdit});
 
   @override
   Widget build(BuildContext context) {
+    return ChangeNotifierProvider<CreateWishTemplateViewModel>(
+      create: (_) {
+        final vm = buildCreateWishTemplateVM();
+        if (templateToEdit != null) {
+          vm.initForEdit(templateToEdit!);
+        }
+        return vm;
+      },
+      child: _CreateWishTemplateView(templateToEdit: templateToEdit),
+    );
+  }
+}
+
+class _CreateWishTemplateView extends StatefulWidget {
+  final WishTemplate? templateToEdit;
+
+  const _CreateWishTemplateView({this.templateToEdit});
+
+  @override
+  State<_CreateWishTemplateView> createState() => _CreateWishTemplateViewState();
+}
+
+class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _contentController;
+
+  final int _maxContentLength = 500;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(
+      text: widget.templateToEdit?.title ?? '',
+    );
+    _contentController = TextEditingController(
+      text: widget.templateToEdit?.content ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<CreateWishTemplateViewModel>();
+
+    // Lắng nghe khi lưu thành công → pop
+    if (vm.isSaved) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) Navigator.pop(context);
+      });
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F0), // Màu be nhạt nền Tết
+      backgroundColor: const Color(0xFFFFF8F0),
       body: SafeArea(
         child: Column(
           children: [
@@ -32,19 +80,19 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildTitleField(),
+                    _buildTitleField(vm),
                     const SizedBox(height: 24),
-                    _buildContentField(),
+                    _buildContentField(vm),
                     const SizedBox(height: 32),
-                    _buildGroupSelector(),
+                    _buildGroupSelector(vm),
                     const SizedBox(height: 24),
-                    _buildFavoriteToggle(),
-                    const SizedBox(height: 24), // padding bottom
+                    _buildFavoriteToggle(vm),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
-            _buildBottomActionBar(context),
+            _buildBottomActionBar(context, vm),
           ],
         ),
       ),
@@ -70,9 +118,11 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
             ),
           ),
           const SizedBox(width: 8),
-          const Text(
-            'Tạo mẫu mới',
-            style: TextStyle(
+          Text(
+            context.read<CreateWishTemplateViewModel>().isEditMode
+                ? 'Chỉnh sửa mẫu'
+                : 'Tạo mẫu mới',
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Color(0xFF1A1A1A),
@@ -84,7 +134,7 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
   }
 
   // 2. TRƯỜNG TIÊU ĐỀ
-  Widget _buildTitleField() {
+  Widget _buildTitleField(CreateWishTemplateViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -102,11 +152,12 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
         ),
         const SizedBox(height: 8),
         TextField(
-          onChanged: (text) {
-            // Demo logic tắt/bật validate lỗi
-            setState(() {
-              _showTitleError = text.isEmpty;
-            });
+          controller: _titleController,
+          onChanged: (_) {
+            // Clear lỗi tiêu đề khi người dùng bắt đầu gõ
+            if (vm.titleError != null) {
+              context.read<CreateWishTemplateViewModel>();
+            }
           },
           decoration: InputDecoration(
             hintText: 'VD: Lời chúc chân thành cho Sếp',
@@ -116,23 +167,23 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: _showTitleError ? Colors.red : Colors.grey.shade300),
+              borderSide: BorderSide(color: vm.titleError != null ? Colors.red : Colors.grey.shade300),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: _showTitleError ? Colors.red : Colors.grey.shade300),
+              borderSide: BorderSide(color: vm.titleError != null ? Colors.red : Colors.grey.shade300),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: _showTitleError ? Colors.red : Colors.red.shade300),
+              borderSide: BorderSide(color: vm.titleError != null ? Colors.red : Colors.red.shade300),
             ),
           ),
         ),
-        if (_showTitleError)
+        if (vm.titleError != null)
           Padding(
             padding: const EdgeInsets.only(top: 8, left: 4),
             child: Text(
-              'Tiêu đề không được để trống',
+              vm.titleError!,
               style: TextStyle(color: Colors.red.shade600, fontSize: 12),
             ),
           ),
@@ -141,7 +192,7 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
   }
 
   // 3 & 4. TRƯỜNG NỘI DUNG VÀ CHÈN BIẾN
-  Widget _buildContentField() {
+  Widget _buildContentField(CreateWishTemplateViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -160,9 +211,14 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
                 ),
               ],
             ),
-            Text(
-              '$_currentContentLength/$_maxContentLength ký tự',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _contentController,
+              builder: (context, value, child) {
+                return Text(
+                  '${value.text.length}/$_maxContentLength ký tự',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                );
+              },
             ),
           ],
         ),
@@ -171,26 +227,34 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(
+              color: vm.contentError != null ? Colors.red : Colors.grey.shade300,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
+                controller: _contentController,
                 maxLines: 8,
                 minLines: 5,
                 maxLength: _maxContentLength,
-                onChanged: (text) {
-                  setState(() => _currentContentLength = text.length);
-                },
                 decoration: InputDecoration(
                   hintText: 'Nhập nội dung lời chúc của bạn... Có thể chèn các biến để cá nhân hóa.',
                   hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15, height: 1.5),
-                  counterText: '', // Ẩn counter mặc định của TextField vì đã làm custom
+                  counterText: '', // Ẩn counter mặc định
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(16),
                 ),
               ),
+              if (vm.contentError != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, bottom: 8),
+                  child: Text(
+                    vm.contentError!,
+                    style: TextStyle(color: Colors.red.shade600, fontSize: 12),
+                  ),
+                ),
               Divider(height: 1, color: Colors.grey.shade200),
               // KHU VỰC CHÈN BIẾN
               Container(
@@ -235,7 +299,20 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
   Widget _buildVariableChip(String placeholder, String description) {
     return InkWell(
       onTap: () {
-        // Handle insert variable logic here in future
+        // Chèn placeholder vào vị trí con trỏ trong content field
+        final currentText = _contentController.text;
+        final selection = _contentController.selection;
+        final newText = currentText.replaceRange(
+          selection.start < 0 ? currentText.length : selection.start,
+          selection.end < 0 ? currentText.length : selection.end,
+          placeholder,
+        );
+        _contentController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(
+            offset: (selection.start < 0 ? currentText.length : selection.start) + placeholder.length,
+          ),
+        );
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -271,7 +348,7 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
   }
 
   // 5. CHỌN NHÓM ĐỐI TƯỢNG
-  Widget _buildGroupSelector() {
+  Widget _buildGroupSelector(CreateWishTemplateViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -283,18 +360,10 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _groups.map((group) {
-            final isSelected = _selectedGroups.contains(group);
+          children: availableGroups.map((group) {
+            final isSelected = vm.selectedGroups.contains(group);
             return GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (isSelected) {
-                    _selectedGroups.remove(group);
-                  } else {
-                    _selectedGroups.add(group);
-                  }
-                });
-              },
+              onTap: () => vm.onGroupToggled(group),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -331,14 +400,14 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
   }
 
   // 6. ĐÁNH DẤU YÊU THÍCH
-  Widget _buildFavoriteToggle() {
+  Widget _buildFavoriteToggle(CreateWishTemplateViewModel vm) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -348,11 +417,7 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            setState(() {
-              _isFavorite = !_isFavorite;
-            });
-          },
+          onTap: () => vm.onFavoriteToggled(!vm.isFavorite),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -394,13 +459,9 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
                   ),
                 ),
                 Switch(
-                  value: _isFavorite,
-                  onChanged: (val) {
-                    setState(() {
-                      _isFavorite = val;
-                    });
-                  },
-                  activeColor: Colors.white,
+                  value: vm.isFavorite,
+                  onChanged: (val) => vm.onFavoriteToggled(val),
+                  activeThumbColor: Colors.white,
                   activeTrackColor: const Color(0xFFD32F2F),
                   inactiveThumbColor: Colors.white,
                   inactiveTrackColor: Colors.grey.shade300,
@@ -414,14 +475,14 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
   }
 
   // 7. FOOTER BUTTON
-  Widget _buildBottomActionBar(BuildContext context) {
+  Widget _buildBottomActionBar(BuildContext context, CreateWishTemplateViewModel vm) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24), // padding bottom cho an toàn
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -432,7 +493,7 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
           Expanded(
             flex: 1,
             child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: vm.isLoading ? null : () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -452,14 +513,14 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
           Expanded(
             flex: 2,
             child: ElevatedButton.icon(
-              onPressed: () {
-                // Handle save template
-                // Demo validate check
-                setState(() {
-                  _showTitleError = false; // reset
-                });
-                Navigator.pop(context); // Demo thành công
-              },
+              onPressed: vm.isLoading
+                  ? null
+                  : () {
+                      vm.saveTemplate(
+                        title: _titleController.text,
+                        content: _contentController.text,
+                      );
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFD32F2F),
                 foregroundColor: Colors.white,
@@ -467,10 +528,19 @@ class _CreateWishTemplatePageState extends State<CreateWishTemplatePage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 0,
               ),
-              icon: const Icon(Icons.save_outlined, size: 20),
-              label: const Text(
-                'Lưu template',
-                style: TextStyle(
+              icon: vm.isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.save_outlined, size: 20),
+              label: Text(
+                vm.isLoading ? 'Đang lưu...' : 'Lưu template',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),

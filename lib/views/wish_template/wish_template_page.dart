@@ -1,85 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:personal_project_prm/di.dart';
+import 'package:personal_project_prm/domain/entities/wish_template.dart';
+import 'package:personal_project_prm/viewmodels/wish_template/wish_template_viewmodel.dart';
 import 'package:personal_project_prm/views/widgets/app_bottom_nav.dart';
 import 'package:personal_project_prm/views/wish_template/create_wish_template_page.dart';
-
-// ─────────────────────────────────────────
-// MOCK DATA MODEL
-// ─────────────────────────────────────────
-
-class WishTemplateMock {
-  final String title;
-  final String content;
-  final bool isSystem;
-  bool isFavorite;
-  final List<String> groups;
-  final int usageCount;
-
-  WishTemplateMock({
-    required this.title,
-    required this.content,
-    required this.isSystem,
-    required this.isFavorite,
-    required this.groups,
-    required this.usageCount,
-  });
-}
-
-final List<WishTemplateMock> _mockTemplates = [
-  WishTemplateMock(
-    title: 'Chúc Tết ngắn gọn, ý nghĩa',
-    content:
-        '"Năm mới Ất Tỵ, kính chúc {{ten}} dồi dào sức khỏe, vạn sự như ý, an khang thịnh vượng."',
-    isSystem: true,
-    isFavorite: true,
-    groups: ['GIA ĐÌNH', 'SẾP'],
-    usageCount: 12,
-  ),
-  WishTemplateMock(
-    title: 'Chúc bạn bè vui nhộn',
-    content:
-        '"Chúc {{ten}} năm mới tiền vào như nước sông Đà, tiền ra nhỏ giọt như cà phê phin. Sớm có bồ nha!"',
-    isSystem: true,
-    isFavorite: false,
-    groups: ['BẠN BÈ'],
-    usageCount: 5,
-  ),
-  WishTemplateMock(
-    title: 'Lời chúc do tôi tự soạn',
-    content:
-        '"Cảm ơn sếp {{ten}} đã dẫn dắt team trong năm qua. Chúc sếp năm mới bùng nổ doanh số, sức..."',
-    isSystem: false,
-    isFavorite: true,
-    groups: ['SẾP'],
-    usageCount: 2,
-  ),
-  WishTemplateMock(
-    title: 'Chúc sức khỏe ông bà',
-    content:
-        '"Cháu kính chúc {{ten}} sống lâu trăm tuổi, thân thể khỏe mạnh, vui vẻ cùng con cháu mỗi dịp Xuân..."',
-    isSystem: true,
-    isFavorite: false,
-    groups: ['GIA ĐÌNH'],
-    usageCount: 0,
-  ),
-  WishTemplateMock(
-    title: 'Chúc đối tác chuyên nghiệp',
-    content:
-        '"Nhân dịp Tết {{nam_am}}, công ty trân trọng gửi lời chúc đến {{ten}} và quý đối tác..."',
-    isSystem: true,
-    isFavorite: false,
-    groups: ['ĐỐI TÁC'],
-    usageCount: 8,
-  ),
-  WishTemplateMock(
-    title: 'Chúc thầy cô kính trọng',
-    content:
-        '"Em {{ten_minh}} kính chúc {{ten}} năm mới sức khỏe dồi dào, hạnh phúc và thành công mỹ mãn..."',
-    isSystem: false,
-    isFavorite: false,
-    groups: ['THẦY CÔ'],
-    usageCount: 3,
-  ),
-];
+import 'package:personal_project_prm/domain/entities/wish_enums.dart';
 
 // ─────────────────────────────────────────
 // CONSTANTS
@@ -110,62 +36,272 @@ const _categories = [
 // MAIN PAGE
 // ─────────────────────────────────────────
 
-class WishTemplatePage extends StatefulWidget {
+class WishTemplatePage extends StatelessWidget {
   const WishTemplatePage({super.key});
 
   @override
-  State<WishTemplatePage> createState() => _WishTemplatePageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<WishTemplateViewModel>(
+      create: (_) => buildWishTemplateVM()..loadTemplates(),
+      child: const _WishTemplateView(),
+    );
+  }
 }
 
-class _WishTemplatePageState extends State<WishTemplatePage> {
-  int _selectedCategory = 0;
-  int _selectedNavIndex = 2;
+class _WishTemplateView extends StatefulWidget {
+  const _WishTemplateView();
 
-  List<WishTemplateMock> get _filteredTemplates {
-    if (_selectedCategory == 0) return _mockTemplates;
-    final keyword = _categories[_selectedCategory].toUpperCase();
-    return _mockTemplates
-        .where((t) => t.groups.any((g) => g.contains(keyword)))
-        .toList();
+  @override
+  State<_WishTemplateView> createState() => _WishTemplateViewState();
+}
+
+class _WishTemplateViewState extends State<_WishTemplateView> {
+  bool _isSearchActive = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<WishTemplateViewModel>();
+
     return Scaffold(
       backgroundColor: _bgScreen,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _WishHeader(
-            onSearchTap: () {},
-            onFilterTap: () {},
+            isSearchActive: _isSearchActive,
+            searchController: _searchController,
+            onSearchToggle: () {
+              setState(() {
+                _isSearchActive = !_isSearchActive;
+                if (!_isSearchActive) {
+                  _searchController.clear();
+                  vm.onSearchChanged('');
+                }
+              });
+            },
+            onSearchChanged: vm.onSearchChanged,
+            onFilterTap: () => _showFilterBottomSheet(context, vm),
           ),
           _CategoryFilter(
             categories: _categories,
-            selectedIndex: _selectedCategory,
-            onSelected: (i) => setState(() => _selectedCategory = i),
+            selectedIndex: vm.selectedCategoryIndex,
+            onSelected: (i) => vm.onCategorySelected(i),
           ),
           Expanded(
-            child: _TemplateList(
-              templates: _filteredTemplates,
-              onFavoriteTap: (template) {
-                setState(() => template.isFavorite = !template.isFavorite);
-              },
-              onViewTap: (_) {},
-              onEditTap: (_) {},
-              onDeleteTap: (_) {},
+            child: vm.isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: _redTet),
+                  )
+                : vm.errorMessage != null
+                    ? _ErrorView(
+                        message: vm.errorMessage!,
+                        onRetry: () => vm.loadTemplates(),
+                      )
+                    : _TemplateList(
+                        templates: vm.filteredTemplates,
+                        onFavoriteTap: (template) {
+                          vm.toggleFavorite(template.id, template.isFavorite);
+                        },
+                        onViewTap: (_) {},
+                        onEditTap: (template) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CreateWishTemplatePage(
+                                templateToEdit: template,
+                              ),
+                            ),
+                          ).then((_) => vm.loadTemplates());
+                        },
+                        onDeleteTap: (template) async {
+                          final confirm = await _showDeleteDialog(context);
+                          if (confirm == true) {
+                            vm.deleteTemplate(template.id);
+                          }
+                        },
+                      ),
             ),
-          ),
         ],
       ),
       floatingActionButton: _WishFab(onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const CreateWishTemplatePage()),
-        );
+          MaterialPageRoute(
+            builder: (_) => const CreateWishTemplatePage(),
+          ),
+        ).then((_) => vm.loadTemplates());
       }),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: const AppBottomNav(currentIndex: NavIndex.wishTemplates),
+    );
+  }
+
+  Future<bool?> _showDeleteDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận xóa'),
+        content: const Text('Bạn có chắc muốn xóa mẫu lời chúc này không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Xóa', style: TextStyle(color: Colors.red.shade700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterBottomSheet(BuildContext context, WishTemplateViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Lọc & Sắp xếp',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Sort by usage
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      vm.toggleSortByUsage();
+                      Navigator.pop(ctx);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.sort,
+                            color: vm.sortByUsage ? _redTet : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Sắp xếp theo số lần dùng (nhiều nhất)',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: vm.sortByUsage ? _redTet : Colors.black87,
+                                fontWeight: vm.sortByUsage ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (vm.sortByUsage)
+                            const Icon(Icons.check, color: _redTet, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const Divider(height: 24),
+                
+                // Filter by favorite
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      vm.toggleShowOnlyFavorites();
+                      Navigator.pop(ctx);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            vm.showOnlyFavorites ? Icons.favorite : Icons.favorite_border,
+                            color: vm.showOnlyFavorites ? _yellowFav : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Chỉ hiển thị mẫu yêu thích',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: vm.showOnlyFavorites ? _yellowFav : Colors.black87,
+                                fontWeight: vm.showOnlyFavorites ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (vm.showOnlyFavorites)
+                            const Icon(Icons.check, color: _yellowFav, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────
+// WIDGET: ERROR VIEW
+// ─────────────────────────────────────────
+
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorView({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: onRetry, child: const Text('Thử lại')),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -175,10 +311,19 @@ class _WishTemplatePageState extends State<WishTemplatePage> {
 // ─────────────────────────────────────────
 
 class _WishHeader extends StatelessWidget {
-  final VoidCallback onSearchTap;
+  final bool isSearchActive;
+  final TextEditingController searchController;
+  final VoidCallback onSearchToggle;
+  final ValueChanged<String> onSearchChanged;
   final VoidCallback onFilterTap;
 
-  const _WishHeader({required this.onSearchTap, required this.onFilterTap});
+  const _WishHeader({
+    required this.isSearchActive,
+    required this.searchController,
+    required this.onSearchToggle,
+    required this.onSearchChanged,
+    required this.onFilterTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -186,31 +331,62 @@ class _WishHeader extends StatelessWidget {
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Expanded(
-              child: Text(
-                'Kho lời chúc Tết',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
-                ),
+        child: isSearchActive
+            ? Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: onSearchChanged,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: 'Tìm kiếm tiêu đề...',
+                          hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Color(0xFF424242)),
+                    onPressed: onSearchToggle,
+                  ),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Kho lời chúc Tết',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onSearchToggle,
+                    icon: const Icon(Icons.search, color: Color(0xFF424242), size: 26),
+                    tooltip: 'Tìm kiếm',
+                  ),
+                  IconButton(
+                    onPressed: onFilterTap,
+                    icon: const Icon(Icons.filter_list, color: Color(0xFF424242), size: 26),
+                    tooltip: 'Bộ lọc',
+                  ),
+                ],
               ),
-            ),
-            IconButton(
-              onPressed: onSearchTap,
-              icon: const Icon(Icons.search, color: Color(0xFF424242), size: 26),
-              tooltip: 'Tìm kiếm',
-            ),
-            IconButton(
-              onPressed: onFilterTap,
-              icon: const Icon(Icons.filter_list, color: Color(0xFF424242), size: 26),
-              tooltip: 'Bộ lọc',
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -255,8 +431,7 @@ class _CategoryFilter extends StatelessWidget {
                 categories[i],
                 style: TextStyle(
                   color: selected ? Colors.white : _textChipUnselected,
-                  fontWeight:
-                      selected ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13,
                 ),
               ),
@@ -273,11 +448,11 @@ class _CategoryFilter extends StatelessWidget {
 // ─────────────────────────────────────────
 
 class _TemplateList extends StatelessWidget {
-  final List<WishTemplateMock> templates;
-  final ValueChanged<WishTemplateMock> onFavoriteTap;
-  final ValueChanged<WishTemplateMock> onViewTap;
-  final ValueChanged<WishTemplateMock> onEditTap;
-  final ValueChanged<WishTemplateMock> onDeleteTap;
+  final List<WishTemplate> templates;
+  final ValueChanged<WishTemplate> onFavoriteTap;
+  final ValueChanged<WishTemplate> onViewTap;
+  final ValueChanged<WishTemplate> onEditTap;
+  final ValueChanged<WishTemplate> onDeleteTap;
 
   const _TemplateList({
     required this.templates,
@@ -319,7 +494,7 @@ class _TemplateList extends StatelessWidget {
 // ─────────────────────────────────────────
 
 class _TemplateCard extends StatelessWidget {
-  final WishTemplateMock template;
+  final WishTemplate template;
   final VoidCallback onFavoriteTap;
   final VoidCallback onViewTap;
   final VoidCallback onEditTap;
@@ -377,7 +552,7 @@ class _TemplateCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Group chips
-            _GroupChips(groups: template.groups),
+            _GroupChips(groups: template.targetGroups),
             const SizedBox(height: 12),
 
             // Footer
@@ -497,22 +672,25 @@ class _GroupChips extends StatelessWidget {
       runSpacing: 6,
       children: groups
           .map(
-            (g) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _bgGroupChip,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                g,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF616161),
-                  letterSpacing: 0.4,
+            (g) {
+              final displayName = ContactCategoryExtension.fromDbString(g).displayName;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _bgGroupChip,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ),
-            ),
+                child: Text(
+                  displayName,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF616161),
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              );
+            },
           )
           .toList(),
     );
@@ -554,7 +732,7 @@ class _CardFooter extends StatelessWidget {
         // View icon (always visible)
         _FooterIconBtn(
           icon: Icons.remove_red_eye_outlined,
-          color: Color(0xFF9E9E9E),
+          color: const Color(0xFF9E9E9E),
           onTap: onViewTap,
         ),
 
@@ -563,13 +741,13 @@ class _CardFooter extends StatelessWidget {
           const SizedBox(width: 2),
           _FooterIconBtn(
             icon: Icons.edit_outlined,
-            color: Color(0xFF9E9E9E),
+            color: const Color(0xFF9E9E9E),
             onTap: onEditTap,
           ),
           const SizedBox(width: 2),
           _FooterIconBtn(
             icon: Icons.delete_outline,
-            color: Color(0xFFE53935),
+            color: const Color(0xFFE53935),
             onTap: onDeleteTap,
           ),
         ],
@@ -623,4 +801,3 @@ class _WishFab extends StatelessWidget {
     );
   }
 }
-
