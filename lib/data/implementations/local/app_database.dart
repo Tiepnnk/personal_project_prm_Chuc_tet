@@ -18,7 +18,7 @@ class AppDatabase {
     final path = join(doPath, 'personal_project_prm.db');
     final dbInstance = await openDatabase(
         path,
-        version: 5,
+        version: 6,
         onCreate: (Database db, int version) async{
           // users: lưu username +  password_hash + phone + full_name
           await db.execute('''
@@ -65,6 +65,9 @@ class AppDatabase {
           }
           if (oldVersion < 5) {
              await _migrateToV5(db);
+          }
+          if (oldVersion < 6) {
+             await _migrateToV6(db);
           }
         },
     );
@@ -132,7 +135,7 @@ class AppDatabase {
         id TEXT PRIMARY KEY,
         contactId TEXT NOT NULL,
         year INTEGER NOT NULL,
-        status TEXT NOT NULL CHECK(status IN ('PENDING', 'CALLED', 'CALLED_BACK')) DEFAULT 'PENDING',
+        status TEXT NOT NULL CHECK(status IN ('PENDING', 'CALLED', 'MESSAGED')) DEFAULT 'PENDING',
         completedAt TEXT,
         customMessage TEXT,
         followUpNote TEXT,
@@ -185,13 +188,13 @@ class AppDatabase {
     // SQLite doesn't directly support dropping columns or modifying CHECK constraints.
     // The standard way is to create a new table, copy data, and drop the old table.
     
-    // 1. Create temporary table with new schema
+    // 1. Create temporary table with new schema (still using old CALLED_BACK for v5)
     await db.execute('''
       CREATE TABLE wish_records_new (
         id TEXT PRIMARY KEY,
         contactId TEXT NOT NULL,
         year INTEGER NOT NULL,
-        status TEXT NOT NULL CHECK(status IN ('PENDING', 'CALLED', 'CALLED_BACK')) DEFAULT 'PENDING',
+        status TEXT NOT NULL DEFAULT 'PENDING',
         completedAt TEXT,
         customMessage TEXT,
         followUpNote TEXT,
@@ -202,8 +205,7 @@ class AppDatabase {
       )
     ''');
 
-    // 2. Copy data over.
-    // Map NO_ANSWER and SKIPPED to PENDING or CALLED to fit new constraint (e.g., fallback to PENDING).
+    // 2. Copy data over, mapping old statuses to valid ones.
     await db.execute('''
       INSERT INTO wish_records_new (id, contactId, year, status, completedAt, customMessage, followUpNote, templateUsedId)
       SELECT 
@@ -225,6 +227,46 @@ class AppDatabase {
     await db.execute('DROP TABLE wish_records');
 
     // 4. Rename new table to original name
+    await db.execute('ALTER TABLE wish_records_new RENAME TO wish_records');
+  }
+
+  static Future<void> _migrateToV6(Database db) async {
+    // Rename CALLED_BACK -> MESSAGED and enforce the new CHECK constraint.
+    await db.execute('''
+      CREATE TABLE wish_records_new (
+        id TEXT PRIMARY KEY,
+        contactId TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('PENDING', 'CALLED', 'MESSAGED')) DEFAULT 'PENDING',
+        completedAt TEXT,
+        customMessage TEXT,
+        followUpNote TEXT,
+        templateUsedId TEXT,
+        FOREIGN KEY (contactId) REFERENCES contacts (id) ON DELETE CASCADE,
+        FOREIGN KEY (templateUsedId) REFERENCES wish_templates (id) ON DELETE SET NULL,
+        UNIQUE(contactId, year)
+      )
+    ''');
+
+    await db.execute('''
+      INSERT INTO wish_records_new (id, contactId, year, status, completedAt, customMessage, followUpNote, templateUsedId)
+      SELECT
+        id,
+        contactId,
+        year,
+        CASE
+          WHEN status = 'CALLED_BACK' THEN 'MESSAGED'
+          WHEN status NOT IN ('PENDING', 'CALLED', 'MESSAGED') THEN 'PENDING'
+          ELSE status
+        END,
+        completedAt,
+        customMessage,
+        followUpNote,
+        templateUsedId
+      FROM wish_records
+    ''');
+
+    await db.execute('DROP TABLE wish_records');
     await db.execute('ALTER TABLE wish_records_new RENAME TO wish_records');
   }
 }

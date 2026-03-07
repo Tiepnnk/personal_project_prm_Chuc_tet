@@ -4,6 +4,7 @@ import 'package:personal_project_prm/viewmodels/home/home_viewmodel.dart';
 import 'package:personal_project_prm/viewmodels/login/login_viewmodel.dart';
 import 'package:personal_project_prm/viewmodels/register/register_viewmodel.dart';
 import 'package:personal_project_prm/views/login/login_page.dart';
+import 'package:personal_project_prm/views/splash/splash_page.dart';
 import 'package:personal_project_prm/viewmodels/contact/contact_viewmodel.dart';
 import 'package:provider/provider.dart';
 
@@ -25,7 +26,7 @@ class MyApp extends StatelessWidget{
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: const LoginPage(),
+        home: const SplashPage(), // Kiểm tra session → HomePage hoặc LoginPage
         routes: {
           '/login': (context) => const LoginPage(),
         },

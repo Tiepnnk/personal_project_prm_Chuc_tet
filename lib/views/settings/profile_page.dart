@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:personal_project_prm/di.dart';
 import 'package:personal_project_prm/viewmodels/profile/profile_viewmodel.dart';
+import 'package:personal_project_prm/views/widgets/app_bottom_nav.dart';
 
 // ─── Wrapper (Provider) ───────────────────────────────────────────────────────
 
@@ -187,7 +188,7 @@ class _ProfileViewState extends State<_ProfileView> {
           },
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: const AppBottomNav(currentIndex: NavIndex.settings),
     );
   }
 
@@ -379,69 +380,6 @@ class _ProfileViewState extends State<_ProfileView> {
     );
   }
 
-  // ─── Bottom Navigation ────────────────────────────────────────────────────────
-
-  Widget _buildBottomNav() {
-    return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      color: Colors.white,
-      elevation: 20,
-      shadowColor: Colors.black.withValues(alpha: 0.15),
-      child: SizedBox(
-        height: 65,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildNavItem(Icons.home_filled, 'Trang chủ', false, () {
-                Navigator.popUntil(context, (route) => route.isFirst);
-              }),
-              _buildNavItem(Icons.contacts, 'Danh bạ', false, () {
-                Navigator.pop(context);
-              }),
-              const SizedBox(width: 48), // Space for FAB
-              _buildNavItem(Icons.pie_chart, 'Tiến độ', false, () {}),
-              _buildNavItem(Icons.settings, 'Cài đặt', true, () {}),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-      IconData icon, String label, bool isActive, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? const Color(0xFFD32F2F) : Colors.grey[400],
-              size: 26,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: isActive ? const Color(0xFFD32F2F) : Colors.grey[500],
-                fontWeight:
-                    isActive ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ─── Data model for menu items ────────────────────────────────────────────────

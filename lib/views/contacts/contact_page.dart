@@ -7,7 +7,7 @@ import 'package:personal_project_prm/views/contacts/widgets/contact_app_bar.dart
 import 'package:personal_project_prm/views/contacts/widgets/contact_search_bar.dart';
 import 'package:personal_project_prm/views/contacts/widgets/contact_category_filter.dart';
 import 'package:personal_project_prm/views/contacts/widgets/contact_card.dart';
-import 'package:personal_project_prm/views/contacts/widgets/contact_bottom_nav.dart';
+import 'package:personal_project_prm/views/widgets/app_bottom_nav.dart';
 
 class ContactPage extends StatefulWidget {
   const ContactPage({super.key});
@@ -117,8 +117,8 @@ class _ContactPageState extends State<ContactPage> {
           child: const Icon(Icons.add, color: Colors.white, size: 32),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const ContactBottomNav(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: const AppBottomNav(currentIndex: NavIndex.contacts),
     );
   }
 

@@ -16,9 +16,9 @@ enum ContactPriority {
 }
 
 enum WishStatus {
-  pending,
-  called,
-  calledBack
+  pending,  // Chưa gọi/nhắn
+  called,   // Đã gọi
+  messaged  // Đã nhắn
 }
 
 enum ReminderType {
@@ -82,18 +82,27 @@ extension ContactPriorityExtension on ContactPriority {
 }
 
 extension WishStatusExtension on WishStatus {
-  String get toDbString {
-    if (this == WishStatus.calledBack) return 'CALLED_BACK';
-    return name.toUpperCase();
+  String get toDbString => name.toUpperCase();
+
+  String get displayName {
+    switch (this) {
+      case WishStatus.pending:
+        return 'Chưa gọi/nhắn';
+      case WishStatus.called:
+        return 'Đã gọi';
+      case WishStatus.messaged:
+        return 'Đã nhắn';
+    }
   }
+
   static WishStatus fromDbString(String str) {
-    if (str.toUpperCase() == 'CALLED_BACK') return WishStatus.calledBack;
     return WishStatus.values.firstWhere(
       (e) => e.name.toUpperCase() == str.toUpperCase(),
       orElse: () => WishStatus.pending,
     );
   }
 }
+
 
 extension ReminderTypeExtension on ReminderType {
   String get toDbString {

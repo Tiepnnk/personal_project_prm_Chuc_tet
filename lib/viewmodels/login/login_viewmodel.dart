@@ -33,6 +33,23 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
+  /// Kiểm tra session đã lưu khi app khởi động.
+  /// Trả về true nếu user đã đăng nhập trước đó, false nếu chưa.
+  Future<bool> checkSession() async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      authSession = await repository.getCurrentSession();
+      return authSession != null;
+    } catch (_) {
+      authSession = null;
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> logout() async{
     await repository.logout();
     authSession = null;
