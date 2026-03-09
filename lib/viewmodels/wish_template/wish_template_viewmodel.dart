@@ -106,14 +106,18 @@ class WishTemplateViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleSortByUsage() {
-    _sortByUsage = !_sortByUsage;
-    notifyListeners();
+  void setSortByUsage(bool value) {
+    if (_sortByUsage != value) {
+      _sortByUsage = value;
+      notifyListeners();
+    }
   }
 
-  void toggleShowOnlyFavorites() {
-    _showOnlyFavorites = !_showOnlyFavorites;
-    notifyListeners();
+  void setShowOnlyFavorites(bool value) {
+    if (_showOnlyFavorites != value) {
+      _showOnlyFavorites = value;
+      notifyListeners();
+    }
   }
 
   Future<void> toggleFavorite(String id, bool currentValue) async {

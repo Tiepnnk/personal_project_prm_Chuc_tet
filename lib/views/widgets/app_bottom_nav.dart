@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:personal_project_prm/views/home/home_page.dart';
 import 'package:personal_project_prm/views/contacts/contact_page.dart';
 import 'package:personal_project_prm/views/wish_template/wish_template_page.dart';
-import 'package:personal_project_prm/views/progress/progress_page.dart';
+import 'package:personal_project_prm/views/wish/wish_page.dart';
 import 'package:personal_project_prm/views/settings/profile_page.dart';
 
 /// Chỉ số tab của Bottom Navigation.
@@ -10,7 +10,7 @@ class NavIndex {
   static const int home          = 0;
   static const int contacts      = 1;
   static const int wishTemplates = 2;
-  static const int progress      = 3;
+  static const int wish      = 3;
   static const int settings      = 4;
 }
 
@@ -41,8 +41,8 @@ class AppBottomNav extends StatelessWidget {
       case NavIndex.wishTemplates:
         destination = const WishTemplatePage();
         break;
-      case NavIndex.progress:
-        destination = const ProgressPage();
+      case NavIndex.wish:
+        destination = const WishPage();
         break;
       case NavIndex.settings:
         destination = const ProfilePage();
@@ -89,7 +89,7 @@ class AppBottomNav extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.menu_book_outlined),
           activeIcon: Icon(Icons.menu_book),
-          label: 'Tiến độ',
+          label: 'Chúc tết',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings_outlined),

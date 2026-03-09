@@ -6,8 +6,9 @@ import 'package:personal_project_prm/viewmodels/wish_template/create_wish_templa
 
 class CreateWishTemplatePage extends StatelessWidget {
   final WishTemplate? templateToEdit;
+  final bool isReadOnly;
 
-  const CreateWishTemplatePage({super.key, this.templateToEdit});
+  const CreateWishTemplatePage({super.key, this.templateToEdit, this.isReadOnly = false});
 
   @override
   Widget build(BuildContext context) {
@@ -19,15 +20,16 @@ class CreateWishTemplatePage extends StatelessWidget {
         }
         return vm;
       },
-      child: _CreateWishTemplateView(templateToEdit: templateToEdit),
+      child: _CreateWishTemplateView(templateToEdit: templateToEdit, isReadOnly: isReadOnly),
     );
   }
 }
 
 class _CreateWishTemplateView extends StatefulWidget {
   final WishTemplate? templateToEdit;
+  final bool isReadOnly;
 
-  const _CreateWishTemplateView({this.templateToEdit});
+  const _CreateWishTemplateView({this.templateToEdit, this.isReadOnly = false});
 
   @override
   State<_CreateWishTemplateView> createState() => _CreateWishTemplateViewState();
@@ -37,7 +39,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
 
-  final int _maxContentLength = 500;
+  final int _maxContentLength = 2000;
 
   @override
   void initState() {
@@ -120,7 +122,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
           const SizedBox(width: 8),
           Text(
             context.read<CreateWishTemplateViewModel>().isEditMode
-                ? 'Chỉnh sửa mẫu'
+                ? (widget.isReadOnly ? 'Chi tiết mẫu' : 'Chỉnh sửa mẫu')
                 : 'Tạo mẫu mới',
             style: const TextStyle(
               fontSize: 24,
@@ -153,6 +155,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
         const SizedBox(height: 8),
         TextField(
           controller: _titleController,
+          enabled: !widget.isReadOnly,
           onChanged: (_) {
             // Clear lỗi tiêu đề khi người dùng bắt đầu gõ
             if (vm.titleError != null) {
@@ -236,6 +239,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
             children: [
               TextField(
                 controller: _contentController,
+                enabled: !widget.isReadOnly,
                 maxLines: 8,
                 minLines: 5,
                 maxLength: _maxContentLength,
@@ -298,22 +302,24 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
 
   Widget _buildVariableChip(String placeholder, String description) {
     return InkWell(
-      onTap: () {
-        // Chèn placeholder vào vị trí con trỏ trong content field
-        final currentText = _contentController.text;
-        final selection = _contentController.selection;
-        final newText = currentText.replaceRange(
-          selection.start < 0 ? currentText.length : selection.start,
-          selection.end < 0 ? currentText.length : selection.end,
-          placeholder,
-        );
-        _contentController.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(
-            offset: (selection.start < 0 ? currentText.length : selection.start) + placeholder.length,
-          ),
-        );
-      },
+      onTap: widget.isReadOnly
+          ? null
+          : () {
+              // Chèn placeholder vào vị trí con trỏ trong content field
+              final currentText = _contentController.text;
+              final selection = _contentController.selection;
+              final newText = currentText.replaceRange(
+                selection.start < 0 ? currentText.length : selection.start,
+                selection.end < 0 ? currentText.length : selection.end,
+                placeholder,
+              );
+              _contentController.value = TextEditingValue(
+                text: newText,
+                selection: TextSelection.collapsed(
+                  offset: (selection.start < 0 ? currentText.length : selection.start) + placeholder.length,
+                ),
+              );
+            },
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -363,7 +369,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
           children: availableGroups.map((group) {
             final isSelected = vm.selectedGroups.contains(group);
             return GestureDetector(
-              onTap: () => vm.onGroupToggled(group),
+              onTap: widget.isReadOnly ? null : () => vm.onGroupToggled(group),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -417,7 +423,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => vm.onFavoriteToggled(!vm.isFavorite),
+          onTap: widget.isReadOnly ? null : () => vm.onFavoriteToggled(!vm.isFavorite),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -460,7 +466,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
                 ),
                 Switch(
                   value: vm.isFavorite,
-                  onChanged: (val) => vm.onFavoriteToggled(val),
+                  onChanged: widget.isReadOnly ? null : (val) => vm.onFavoriteToggled(val),
                   activeThumbColor: Colors.white,
                   activeTrackColor: const Color(0xFFD32F2F),
                   inactiveThumbColor: Colors.white,
@@ -476,6 +482,8 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
 
   // 7. FOOTER BUTTON
   Widget _buildBottomActionBar(BuildContext context, CreateWishTemplateViewModel vm) {
+    if (widget.isReadOnly) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: BoxDecoration(

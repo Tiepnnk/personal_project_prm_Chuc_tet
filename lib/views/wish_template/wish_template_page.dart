@@ -109,13 +109,13 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
                         onFavoriteTap: (template) {
                           vm.toggleFavorite(template.id, template.isFavorite);
                         },
-                        onViewTap: (_) {},
-                        onEditTap: (template) {
+                        onCardTap: (template) {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => CreateWishTemplatePage(
                                 templateToEdit: template,
+                                isReadOnly: template.isSystem,
                               ),
                             ),
                           ).then((_) => vm.loadTemplates());
@@ -164,6 +164,9 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
   }
 
   void _showFilterBottomSheet(BuildContext context, WishTemplateViewModel vm) {
+    bool localSortByUsage = vm.sortByUsage;
+    bool localShowOnlyFavorites = vm.showOnlyFavorites;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -171,105 +174,136 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Lọc & Sắp xếp',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Lọc & Sắp xếp',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
+                    const SizedBox(height: 16),
+                    
+                    // Sort by usage
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            localSortByUsage = !localSortByUsage;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.sort,
+                                color: localSortByUsage ? _redTet : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Sắp xếp theo số lần dùng (nhiều nhất)',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: localSortByUsage ? _redTet : Colors.black87,
+                                    fontWeight: localSortByUsage ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                              if (localSortByUsage)
+                                const Icon(Icons.check, color: _redTet, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
+                    
+                    const Divider(height: 24),
+                    
+                    // Filter by favorite
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            localShowOnlyFavorites = !localShowOnlyFavorites;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          child: Row(
+                            children: [
+                              Icon(
+                                localShowOnlyFavorites ? Icons.favorite : Icons.favorite_border,
+                                color: localShowOnlyFavorites ? _yellowFav : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Chỉ hiển thị mẫu yêu thích',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: localShowOnlyFavorites ? _yellowFav : Colors.black87,
+                                    fontWeight: localShowOnlyFavorites ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                              if (localShowOnlyFavorites)
+                                const Icon(Icons.check, color: _yellowFav, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // OK Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _redTet,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          vm.setSortByUsage(localSortByUsage);
+                          vm.setShowOnlyFavorites(localShowOnlyFavorites);
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text(
+                          'Áp dụng',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
-                const SizedBox(height: 16),
-                
-                // Sort by usage
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      vm.toggleSortByUsage();
-                      Navigator.pop(ctx);
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.sort,
-                            color: vm.sortByUsage ? _redTet : Colors.grey[600],
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Sắp xếp theo số lần dùng (nhiều nhất)',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: vm.sortByUsage ? _redTet : Colors.black87,
-                                fontWeight: vm.sortByUsage ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                          if (vm.sortByUsage)
-                            const Icon(Icons.check, color: _redTet, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                
-                const Divider(height: 24),
-                
-                // Filter by favorite
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      vm.toggleShowOnlyFavorites();
-                      Navigator.pop(ctx);
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                      child: Row(
-                        children: [
-                          Icon(
-                            vm.showOnlyFavorites ? Icons.favorite : Icons.favorite_border,
-                            color: vm.showOnlyFavorites ? _yellowFav : Colors.grey[600],
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Chỉ hiển thị mẫu yêu thích',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: vm.showOnlyFavorites ? _yellowFav : Colors.black87,
-                                fontWeight: vm.showOnlyFavorites ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                          if (vm.showOnlyFavorites)
-                            const Icon(Icons.check, color: _yellowFav, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -367,7 +401,7 @@ class _WishHeader extends StatelessWidget {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Kho lời chúc Tết',
+                      'Mẫu Các Câu Chúc Tết',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -450,15 +484,13 @@ class _CategoryFilter extends StatelessWidget {
 class _TemplateList extends StatelessWidget {
   final List<WishTemplate> templates;
   final ValueChanged<WishTemplate> onFavoriteTap;
-  final ValueChanged<WishTemplate> onViewTap;
-  final ValueChanged<WishTemplate> onEditTap;
+  final ValueChanged<WishTemplate> onCardTap;
   final ValueChanged<WishTemplate> onDeleteTap;
 
   const _TemplateList({
     required this.templates,
     required this.onFavoriteTap,
-    required this.onViewTap,
-    required this.onEditTap,
+    required this.onCardTap,
     required this.onDeleteTap,
   });
 
@@ -480,8 +512,7 @@ class _TemplateList extends StatelessWidget {
         return _TemplateCard(
           template: templates[i],
           onFavoriteTap: () => onFavoriteTap(templates[i]),
-          onViewTap: () => onViewTap(templates[i]),
-          onEditTap: () => onEditTap(templates[i]),
+          onCardTap: () => onCardTap(templates[i]),
           onDeleteTap: () => onDeleteTap(templates[i]),
         );
       },
@@ -496,74 +527,73 @@ class _TemplateList extends StatelessWidget {
 class _TemplateCard extends StatelessWidget {
   final WishTemplate template;
   final VoidCallback onFavoriteTap;
-  final VoidCallback onViewTap;
-  final VoidCallback onEditTap;
+  final VoidCallback onCardTap;
   final VoidCallback onDeleteTap;
 
   const _TemplateCard({
     required this.template,
     required this.onFavoriteTap,
-    required this.onViewTap,
-    required this.onEditTap,
+    required this.onCardTap,
     required this.onDeleteTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Row 1: Title + Favorite
-            _CardTitleRow(
-              title: template.title,
-              isSystem: template.isSystem,
-              isFavorite: template.isFavorite,
-              onFavoriteTap: onFavoriteTap,
-            ),
-            const SizedBox(height: 10),
-
-            // Content preview
-            Text(
-              template.content,
-              style: const TextStyle(
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-                color: Color(0xFF757575),
-                height: 1.5,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-
-            // Group chips
-            _GroupChips(groups: template.targetGroups),
-            const SizedBox(height: 12),
-
-            // Footer
-            _CardFooter(
-              usageCount: template.usageCount,
-              isSystem: template.isSystem,
-              onViewTap: onViewTap,
-              onEditTap: onEditTap,
-              onDeleteTap: onDeleteTap,
+    return GestureDetector(
+      onTap: onCardTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Row 1: Title + Favorite
+              _CardTitleRow(
+                title: template.title,
+                isSystem: template.isSystem,
+                isFavorite: template.isFavorite,
+                onFavoriteTap: onFavoriteTap,
+              ),
+              const SizedBox(height: 10),
+
+              // Content preview
+              Text(
+                template.content,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: Color(0xFF757575),
+                  height: 1.5,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+
+              // Group chips
+              _GroupChips(groups: template.targetGroups),
+              const SizedBox(height: 12),
+
+              // Footer
+              _CardFooter(
+                usageCount: template.usageCount,
+                isSystem: template.isSystem,
+                onDeleteTap: onDeleteTap,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -704,15 +734,11 @@ class _GroupChips extends StatelessWidget {
 class _CardFooter extends StatelessWidget {
   final int usageCount;
   final bool isSystem;
-  final VoidCallback onViewTap;
-  final VoidCallback onEditTap;
   final VoidCallback onDeleteTap;
 
   const _CardFooter({
     required this.usageCount,
     required this.isSystem,
-    required this.onViewTap,
-    required this.onEditTap,
     required this.onDeleteTap,
   });
 
@@ -729,22 +755,8 @@ class _CardFooter extends StatelessWidget {
         ),
         const Spacer(),
 
-        // View icon (always visible)
-        _FooterIconBtn(
-          icon: Icons.remove_red_eye_outlined,
-          color: const Color(0xFF9E9E9E),
-          onTap: onViewTap,
-        ),
-
-        // Edit & Delete chỉ hiện với template cá nhân
+        // Delete chỉ hiện với template cá nhân
         if (!isSystem) ...[
-          const SizedBox(width: 2),
-          _FooterIconBtn(
-            icon: Icons.edit_outlined,
-            color: const Color(0xFF9E9E9E),
-            onTap: onEditTap,
-          ),
-          const SizedBox(width: 2),
           _FooterIconBtn(
             icon: Icons.delete_outline,
             color: const Color(0xFFE53935),
