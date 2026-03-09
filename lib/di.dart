@@ -16,6 +16,10 @@ import 'package:personal_project_prm/data/implementations/mapper/wish_template_m
 import 'package:personal_project_prm/data/implementations/repositories/wish_template_repository.dart';
 import 'package:personal_project_prm/viewmodels/wish_template/wish_template_viewmodel.dart';
 import 'package:personal_project_prm/viewmodels/wish_template/create_wish_template_viewmodel.dart';
+import 'package:personal_project_prm/data/implementations/api/wish_record_api.dart';
+import 'package:personal_project_prm/data/implementations/mapper/wish_record_mapper.dart';
+import 'package:personal_project_prm/data/implementations/repositories/wish_record_repository.dart';
+import 'package:personal_project_prm/viewmodels/wish/wish_viewmodel.dart';
 
 LoginViewModel buildLoginVM(){
   // final authApi = AuthApi(); // implements AuthApi
@@ -52,7 +56,17 @@ ContactViewModel buildContactVM() {
     authRepository: authRepository,
   );
 
-  return ContactViewModel(contactRepository: contactRepository);
+  final wishRecordApi = WishRecordApi(AppDatabase.instance);
+  final wishRecordMapper = WishRecordMapper();
+  final wishRecordRepository = WishRecordRepository(
+    wishRecordApi: wishRecordApi,
+    wishRecordMapper: wishRecordMapper,
+  );
+
+  return ContactViewModel(
+    contactRepository: contactRepository,
+    wishRecordRepository: wishRecordRepository,
+  );
 }
 
 AddContactViewModel buildAddContactVM() {
@@ -108,4 +122,39 @@ CreateWishTemplateViewModel buildCreateWishTemplateVM() {
   );
 
   return CreateWishTemplateViewModel(repository: wishTemplateRepository);
+}
+
+WishViewModel buildWishVM() {
+  final authApi = AuthApi(AppDatabase.instance);
+  final authSessionMapper = AuthSessionMapper();
+  final authRepository = AuthRepository(api: authApi, mapper: authSessionMapper);
+
+  final contactApi = ContactApi(AppDatabase.instance);
+  final contactMapper = ContactMapper();
+  final contactRepository = ContactRepository(
+    contactApi: contactApi,
+    contactMapper: contactMapper,
+    authRepository: authRepository,
+  );
+
+  final wishTemplateApi = WishTemplateApi(AppDatabase.instance);
+  final wishTemplateMapper = WishTemplateMapper();
+  final wishTemplateRepository = WishTemplateRepository(
+    wishTemplateApi: wishTemplateApi,
+    wishTemplateMapper: wishTemplateMapper,
+    authRepository: authRepository,
+  );
+
+  final wishRecordApi = WishRecordApi(AppDatabase.instance);
+  final wishRecordMapper = WishRecordMapper();
+  final wishRecordRepository = WishRecordRepository(
+    wishRecordApi: wishRecordApi,
+    wishRecordMapper: wishRecordMapper,
+  );
+
+  return WishViewModel(
+    contactRepository: contactRepository,
+    wishTemplateRepository: wishTemplateRepository,
+    wishRecordRepository: wishRecordRepository,
+  );
 }

@@ -77,6 +77,7 @@ class _ContactPageState extends State<ContactPage> {
                       final contact = viewModel.filteredContacts[index];
                       return ContactCard(
                         contact: contact,
+                        wishStatus: viewModel.getWishStatus(contact.id),
                         onEdit: () => _onEditContact(contact),
                         onDelete: () => _onDeleteContact(contact),
                       );

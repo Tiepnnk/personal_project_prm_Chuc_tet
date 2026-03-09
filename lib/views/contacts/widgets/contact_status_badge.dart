@@ -1,33 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:personal_project_prm/domain/entities/wish_enums.dart';
 
 class ContactStatusBadge extends StatelessWidget {
-  final String status;
+  /// Trạng thái chúc Tết thực tế từ wish_records, null = chưa có record nào
+  final WishStatus? wishStatus;
 
-  const ContactStatusBadge({super.key, required this.status});
+  const ContactStatusBadge({super.key, this.wishStatus});
 
   @override
   Widget build(BuildContext context) {
     Color bgColor;
     Color textColor;
     IconData iconData;
+    String label;
 
-    switch (status) {
-      case 'Đã gọi':
-        bgColor = const Color(0xFFECFDF5);
-        textColor = const Color(0xFF10B981);
-        iconData = Icons.check_circle;
-        break;
-      case 'Gọi lại':
-        bgColor = const Color(0xFFFFF7ED);
-        textColor = const Color(0xFFEA580C);
-        iconData = Icons.access_time_filled;
-        break;
-      case 'Chưa gọi':
-      default:
-        bgColor = const Color(0xFFF3F4F6);
-        textColor = const Color(0xFF6B7280);
-        iconData = Icons.hourglass_empty;
-        break;
+    if (wishStatus == WishStatus.called) {
+      bgColor = const Color(0xFFECFDF5);
+      textColor = const Color(0xFF10B981);
+      iconData = Icons.check_circle;
+      label = 'Đã gọi';
+    } else if (wishStatus == WishStatus.messaged) {
+      bgColor = const Color(0xFFEFF6FF);
+      textColor = const Color(0xFF3B82F6);
+      iconData = Icons.mark_chat_read;
+      label = 'Đã nhắn';
+    } else {
+      // WishStatus.pending hoặc null (chưa có record)
+      bgColor = const Color(0xFFF3F4F6);
+      textColor = const Color(0xFF6B7280);
+      iconData = Icons.hourglass_empty;
+      label = 'Chưa gọi';
     }
 
     return Container(
@@ -40,9 +42,9 @@ class ContactStatusBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(iconData, size: 10, color: textColor),
-          const SizedBox(width: 2),
+          const SizedBox(width: 4),
           Text(
-            status,
+            label,
             style: TextStyle(
               color: textColor,
               fontSize: 10,
@@ -54,3 +56,4 @@ class ContactStatusBadge extends StatelessWidget {
     );
   }
 }
+

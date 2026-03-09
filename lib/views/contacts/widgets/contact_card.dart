@@ -10,12 +10,15 @@ class ContactCard extends StatelessWidget {
   final Contact contact;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  /// Trạng thái chúc Tết lấy từ wish_records, null = chưa có record nào
+  final WishStatus? wishStatus;
 
   const ContactCard({
     super.key,
     required this.contact,
     required this.onEdit,
     required this.onDelete,
+    this.wishStatus,
   });
 
   // --- Utility functions ---
@@ -51,7 +54,6 @@ class ContactCard extends StatelessWidget {
     // Convert Enum to UI String mappings
     final String categoryStr = contact.category.displayName.toUpperCase();
     final String priorityStr = contact.priority.displayName;
-    final String statusStr = 'Chưa gọi'; // Stub for Status, as WishRecords handle Status
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -135,7 +137,7 @@ class ContactCard extends StatelessWidget {
                       children: [
                         ContactPriorityBadge(priority: priorityStr),
                         const SizedBox(width: 8),
-                        ContactStatusBadge(status: statusStr),
+                        ContactStatusBadge(wishStatus: wishStatus),
                       ],
                     ),
                   ],

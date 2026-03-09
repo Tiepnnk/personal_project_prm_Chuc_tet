@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:personal_project_prm/data/interfaces/repositories/icontact_repository.dart';
+import 'package:personal_project_prm/data/interfaces/repositories/iwish_record_repository.dart';
 import 'package:personal_project_prm/domain/entities/contact.dart';
 import 'package:personal_project_prm/domain/entities/wish_enums.dart';
 
 class ContactViewModel extends ChangeNotifier {
   final IContactRepository _contactRepository;
+  final IWishRecordRepository _wishRecordRepository;
 
-  ContactViewModel({required IContactRepository contactRepository})
-      : _contactRepository = contactRepository;
+  ContactViewModel({
+    required IContactRepository contactRepository,
+    required IWishRecordRepository wishRecordRepository,
+  })  : _contactRepository = contactRepository,
+        _wishRecordRepository = wishRecordRepository;
 
   List<Contact> _allContacts = [];
   List<Contact> _filteredContacts = [];
-  
+
+  /// Map contactId → WishStatus (trạng thái chúc Tết năm nay)
+  Map<String, WishStatus> _wishStatusMap = {};
+
   bool _isLoading = false;
   String? _errorMessage;
   String _searchQuery = '';
@@ -23,6 +31,9 @@ class ContactViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
   String get selectedCategory => _selectedCategory;
+
+  /// Lấy WishStatus của một contact trong năm nay, null nếu chưa có record
+  WishStatus? getWishStatus(String contactId) => _wishStatusMap[contactId];
 
   // Categories based on UI
   final List<String> categories = [
@@ -37,24 +48,35 @@ class ContactViewModel extends ChangeNotifier {
     'Khác',     // OTHER
   ];
 
-  /// Initialize and load all contacts
+  /// Initialize and load all contacts + wish statuses
   Future<void> loadContacts() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // Gọi hàm này để tự động chèn dữ liệu mẫu nếu DB danh bạ đang trống
       await _contactRepository.seedDemoIfEmpty();
-      
       _allContacts = await _contactRepository.getAll();
+
+      // Tải trạng thái chúc Tết năm hiện tại
+      final year = DateTime.now().year;
+      _wishStatusMap = await _wishRecordRepository.getStatusMapForYear(year);
+
       _applyFilters();
     } catch (e) {
-      print('Error loading contacts: $e'); // Print to console if error
-      // Could handle error state here
+      print('Error loading contacts: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Gọi sau khi WishViewModel cập nhật status (called/messaged) để refresh badge
+  Future<void> refreshWishStatuses() async {
+    try {
+      final year = DateTime.now().year;
+      _wishStatusMap = await _wishRecordRepository.getStatusMapForYear(year);
+      notifyListeners();
+    } catch (_) {}
   }
 
   /// Update Search Query
@@ -98,12 +120,9 @@ class ContactViewModel extends ChangeNotifier {
       bool matchesSearch = true;
       if (_searchQuery.trim().isNotEmpty) {
         final query = _searchQuery.trim().toLowerCase();
-        
-        // Remove spaces for phone search
         final phoneSearch = contact.phone.replaceAll(' ', '').toLowerCase();
         final queryPhone = query.replaceAll(' ', '');
-
-        matchesSearch = 
+        matchesSearch =
             contact.fullName.toLowerCase().contains(query) ||
             (contact.nickname?.toLowerCase().contains(query) ?? false) ||
             phoneSearch.contains(queryPhone);
@@ -112,7 +131,7 @@ class ContactViewModel extends ChangeNotifier {
       return matchesCategory && matchesSearch;
     }).toList();
   }
-  
+
   /// Helper to convert DB category to UI Vietnamese category
   String _mapCategoryToUI(String dbCategory) {
     switch (dbCategory) {

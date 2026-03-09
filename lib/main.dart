@@ -6,6 +6,7 @@ import 'package:personal_project_prm/viewmodels/register/register_viewmodel.dart
 import 'package:personal_project_prm/views/login/login_page.dart';
 import 'package:personal_project_prm/views/splash/splash_page.dart';
 import 'package:personal_project_prm/viewmodels/contact/contact_viewmodel.dart';
+import 'package:personal_project_prm/viewmodels/wish/wish_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget{
         ChangeNotifierProvider<RegisterViewModel>(create: (_) => buildRegisterVM()),
         ChangeNotifierProvider<HomeViewModel>(create: (_) => buildHomeVM()),
         ChangeNotifierProvider<ContactViewModel>(create: (_) => buildContactVM()),
+        ChangeNotifierProvider<WishViewModel>(create: (_) => buildWishVM()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
