@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:personal_project_prm/data/implementations/api/openai_service.dart';
 import 'package:personal_project_prm/data/interfaces/repositories/iwish_template_repository.dart';
 import 'package:personal_project_prm/domain/entities/wish_template.dart';
 
@@ -28,9 +29,13 @@ const _groupToDbKey = {
 
 class CreateWishTemplateViewModel extends ChangeNotifier {
   final IWishTemplateRepository _repository;
+  final OpenAiService _openAiService;
 
-  CreateWishTemplateViewModel({required IWishTemplateRepository repository})
-      : _repository = repository;
+  CreateWishTemplateViewModel({
+    required IWishTemplateRepository repository,
+    required OpenAiService openAiService,
+  })  : _repository = repository,
+        _openAiService = openAiService;
 
   // ─── State ───────────────────────────────────────────────────────────────────
 
@@ -50,6 +55,11 @@ class CreateWishTemplateViewModel extends ChangeNotifier {
   String? _titleError;
   String? _contentError;
 
+  // AI suggestion state
+  bool _isGeneratingAi = false;
+  String? _aiSuggestion;
+  String? _aiError;
+
   // ─── Getters ─────────────────────────────────────────────────────────────────
 
   bool get isLoading => _isLoading;
@@ -60,6 +70,10 @@ class CreateWishTemplateViewModel extends ChangeNotifier {
   bool get isFavorite => _isFavorite;
   String? get titleError => _titleError;
   String? get contentError => _contentError;
+
+  bool get isGeneratingAi => _isGeneratingAi;
+  String? get aiSuggestion => _aiSuggestion;
+  String? get aiError => _aiError;
 
   // ─── Group & Favorite setters ─────────────────────────────────────────────────
 
@@ -74,6 +88,36 @@ class CreateWishTemplateViewModel extends ChangeNotifier {
 
   void onFavoriteToggled(bool value) {
     _isFavorite = value;
+    notifyListeners();
+  }
+
+  // ─── AI Suggestion ────────────────────────────────────────────────────────────
+
+  /// Gọi OpenAI để gợi ý nội dung lời chúc dựa trên tiêu đề và nhóm đã chọn
+  Future<void> generateAiSuggestion(String title) async {
+    _isGeneratingAi = true;
+    _aiError = null;
+    _aiSuggestion = null;
+    notifyListeners();
+
+    try {
+      final suggestion = await _openAiService.generateWishTemplate(
+        title: title,
+        groups: _selectedGroups.toList(),
+      );
+      _aiSuggestion = suggestion;
+    } catch (e) {
+      _aiError = 'Không thể tạo gợi ý: ${e.toString()}';
+    } finally {
+      _isGeneratingAi = false;
+      notifyListeners();
+    }
+  }
+
+  /// Xóa trạng thái AI suggestion (sau khi đã dùng)
+  void clearAiSuggestion() {
+    _aiSuggestion = null;
+    _aiError = null;
     notifyListeners();
   }
 
@@ -185,6 +229,9 @@ class CreateWishTemplateViewModel extends ChangeNotifier {
     _isFavorite = false;
     _titleError = null;
     _contentError = null;
+    _isGeneratingAi = false;
+    _aiSuggestion = null;
+    _aiError = null;
     notifyListeners();
   }
 }

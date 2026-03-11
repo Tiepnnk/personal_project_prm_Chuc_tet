@@ -19,6 +19,7 @@ import 'package:personal_project_prm/viewmodels/wish_template/create_wish_templa
 import 'package:personal_project_prm/data/implementations/api/wish_record_api.dart';
 import 'package:personal_project_prm/data/implementations/mapper/wish_record_mapper.dart';
 import 'package:personal_project_prm/data/implementations/repositories/wish_record_repository.dart';
+import 'package:personal_project_prm/data/implementations/api/openai_service.dart';
 import 'package:personal_project_prm/viewmodels/wish/wish_viewmodel.dart';
 
 LoginViewModel buildLoginVM(){
@@ -141,7 +142,15 @@ CreateWishTemplateViewModel buildCreateWishTemplateVM() {
     authRepository: authRepository,
   );
 
-  return CreateWishTemplateViewModel(repository: wishTemplateRepository);
+  // TODO: Thay API key thật của bạn vào đây
+  final openAiService = OpenAiService(
+    apiKey: '',
+  );
+
+  return CreateWishTemplateViewModel(
+    repository: wishTemplateRepository,
+    openAiService: openAiService,
+  );
 }
 
 WishViewModel buildWishVM() {

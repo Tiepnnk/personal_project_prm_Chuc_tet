@@ -70,6 +70,14 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
       });
     }
 
+    // Lắng nghe AI suggestion → điền vào ô content
+    if (vm.aiSuggestion != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _contentController.text = vm.aiSuggestion!;
+        vm.clearAiSuggestion();
+      });
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8F0),
       body: SafeArea(
@@ -82,12 +90,16 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 1. Tiêu đề mẫu
                     _buildTitleField(vm),
                     const SizedBox(height: 24),
-                    _buildContentField(vm),
-                    const SizedBox(height: 32),
+                    // 2. Chọn nhóm phù hợp
                     _buildGroupSelector(vm),
                     const SizedBox(height: 24),
+                    // 3. Nội dung (cùng với nút AI mới)
+                    _buildContentField(vm),
+                    const SizedBox(height: 24),
+                    // 5. Đánh dấu yêu thích
                     _buildFavoriteToggle(vm),
                     const SizedBox(height: 24),
                   ],
@@ -194,7 +206,120 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
     );
   }
 
-  // 3 & 4. TRƯỜNG NỘI DUNG VÀ CHÈN BIẾN
+  // 3. CHỌN NHÓM ĐỐI TƯỢNG
+  Widget _buildGroupSelector(CreateWishTemplateViewModel vm) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Phù hợp cho nhóm',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: availableGroups.map((group) {
+            final isSelected = vm.selectedGroups.contains(group);
+            return GestureDetector(
+              onTap: widget.isReadOnly ? null : () => vm.onGroupToggled(group),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFFD32F2F) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFFD32F2F) : Colors.grey.shade300,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isSelected) ...[
+                      const Icon(Icons.check, color: Colors.white, size: 16),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      group,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : Colors.grey.shade700,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  // NÚT GỢI Ý AI
+  Widget _buildAiSuggestButton(CreateWishTemplateViewModel vm) {
+    if (widget.isReadOnly) return const SizedBox.shrink();
+    
+    return GestureDetector(
+      onTap: vm.isGeneratingAi
+          ? null
+          : () => vm.generateAiSuggestion(_titleController.text),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6366F1), Color(0xFFA855F7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: vm.isGeneratingAi
+              ? []
+              : [
+            BoxShadow(
+              color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            vm.isGeneratingAi
+                ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+                : const Icon(
+              Icons.auto_awesome_rounded,
+              color: Colors.white,
+              size: 14,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              vm.isGeneratingAi ? 'Đang tạo...' : 'Gợi ý AI',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 5. TRƯỜNG NỘI DUNG VÀ CHÈN BIẾN
   Widget _buildContentField(CreateWishTemplateViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,17 +339,26 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
                 ),
               ],
             ),
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _contentController,
-              builder: (context, value, child) {
-                return Text(
-                  '${value.text.length}/$_maxContentLength ký tự',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                );
-              },
-            ),
+            _buildAiSuggestButton(vm),
           ],
         ),
+        // Lỗi AI hiển thị ngay dưới dòng tiêu đề nội dung
+        if (vm.aiError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange.shade700),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    vm.aiError!,
+                    style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
@@ -260,7 +394,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
                   ),
                 ),
               Divider(height: 1, color: Colors.grey.shade200),
-              // KHU VỰC CHÈN BIẾN
+              // KHU VỰC CHÈN BIẾN VÀ ĐẾM SỐ KÝ TỰ
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -271,13 +405,31 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'CHÈN BIẾN (Chạm để chèn)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade600,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'CHÈN BIẾN (Chạm để chèn)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _contentController,
+                          builder: (context, value, child) {
+                            return Text(
+                              '${value.text.length}/$_maxContentLength',
+                              style: TextStyle(
+                                fontSize: 11, 
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade500
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     Wrap(
@@ -350,58 +502,6 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
           ],
         ),
       ),
-    );
-  }
-
-  // 5. CHỌN NHÓM ĐỐI TƯỢNG
-  Widget _buildGroupSelector(CreateWishTemplateViewModel vm) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Phù hợp cho nhóm',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: availableGroups.map((group) {
-            final isSelected = vm.selectedGroups.contains(group);
-            return GestureDetector(
-              onTap: widget.isReadOnly ? null : () => vm.onGroupToggled(group),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFD32F2F) : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? const Color(0xFFD32F2F) : Colors.grey.shade300,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isSelected) ...[
-                      const Icon(Icons.check, color: Colors.white, size: 16),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      group,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.grey.shade700,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 
