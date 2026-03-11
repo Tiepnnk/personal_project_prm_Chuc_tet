@@ -62,11 +62,11 @@ class WishViewModel extends ChangeNotifier {
     if (_contactPriorityFilter != 'Tất cả') {
       result = result.where((c) {
         switch (_contactPriorityFilter) {
-          case 'MUST':
+          case 'Bắt buộc':
             return c.priority == ContactPriority.must;
-          case 'SHOULD':
+          case 'Nên gọi':
             return c.priority == ContactPriority.should;
-          case 'OPTION':
+          case 'Tùy chọn':
             return c.priority == ContactPriority.optional;
           default:
             return true;
@@ -145,8 +145,26 @@ class WishViewModel extends ChangeNotifier {
   }
 
   void selectContact(Contact contact) {
+    // Toggle: nếu đã chọn contact này rồi → bỏ chọn
+    if (_selectedContact?.id == contact.id) {
+      _selectedContact = null;
+      _selectedTemplate = null;
+      contentController.clear();
+      _activeRecord = null;
+      notifyListeners();
+      return;
+    }
     _selectedContact = contact;
     // Reset template và content khi đổi contact
+    _selectedTemplate = null;
+    contentController.clear();
+    _activeRecord = null;
+    notifyListeners();
+  }
+
+  /// Xóa lựa chọn contact hiện tại
+  void deselectContact() {
+    _selectedContact = null;
     _selectedTemplate = null;
     contentController.clear();
     _activeRecord = null;
@@ -181,8 +199,22 @@ class WishViewModel extends ChangeNotifier {
   }
 
   void selectTemplate(WishTemplate template) {
+    // Toggle: nếu đã chọn template này rồi → bỏ chọn
+    if (_selectedTemplate?.id == template.id) {
+      _selectedTemplate = null;
+      contentController.clear();
+      notifyListeners();
+      return;
+    }
     _selectedTemplate = template;
     contentController.text = template.content;
+    notifyListeners();
+  }
+
+  /// Xóa lựa chọn template hiện tại
+  void deselectTemplate() {
+    _selectedTemplate = null;
+    contentController.clear();
     notifyListeners();
   }
 
@@ -287,16 +319,6 @@ class WishViewModel extends ChangeNotifier {
     return true;
   }
 
-  /// Xử lý khi gửi qua Zalo deep link
-  Future<bool> sendViaZalo() async {
-    if (_selectedContact == null) return false;
-    final phone = _selectedContact!.phone.replaceAll(' ', '');
-    // Deep link Zalo mở chat với SĐT
-    final uri = Uri.parse('https://zalo.me/$phone');
-    if (!await canLaunchUrl(uri)) return false;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-    return true;
-  }
 
   /// Gọi sau khi người dùng xác nhận đã gửi thành công
   Future<void> markAsMessaged() async {

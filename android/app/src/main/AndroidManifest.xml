@@ -41,5 +41,27 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Cho phép mở link https:// (Zalo deep link: https://zalo.me/...) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <!-- Cho phép mở ứng dụng gọi điện (tel:) -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
+        <!-- Cho phép mở ứng dụng SMS (sms:) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="sms"/>
+        </intent>
+        <!-- Cho phép mở Zalo bằng deep link zalo:// -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="zalo"/>
+        </intent>
+        <!-- Cho phép kiểm tra và mở trực tiếp ứng dụng Zalo -->
+        <package android:name="com.zing.zalo"/>
     </queries>
 </manifest>

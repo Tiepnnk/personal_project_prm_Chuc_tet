@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:personal_project_prm/domain/entities/contact.dart';
 import 'package:personal_project_prm/domain/entities/wish_enums.dart';
@@ -108,7 +110,12 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
             ),
             child: IconButton(
               icon: const Icon(Icons.close, size: 20, color: Color(0xFF546E7A)),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                // Nhấn X → xóa lựa chọn đã chọn và đóng sheet
+                Provider.of<WishViewModel>(context, listen: false)
+                    .deselectContact();
+                Navigator.pop(context);
+              },
             ),
           ),
         ],
@@ -160,17 +167,17 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
             _buildFilterChip(vm, 'Tất cả',
                 isSelected: vm.contactPriorityFilter == 'Tất cả'),
             const SizedBox(width: 8),
-            _buildFilterChip(vm, 'MUST',
+            _buildFilterChip(vm, 'Bắt buộc',
                 dotColor: const Color(0xFFE53935),
-                isSelected: vm.contactPriorityFilter == 'MUST'),
+                isSelected: vm.contactPriorityFilter == 'Bắt buộc'),
             const SizedBox(width: 8),
-            _buildFilterChip(vm, 'SHOULD',
+            _buildFilterChip(vm, 'Nên gọi',
                 dotColor: const Color(0xFFFF9800),
-                isSelected: vm.contactPriorityFilter == 'SHOULD'),
+                isSelected: vm.contactPriorityFilter == 'Nên gọi'),
             const SizedBox(width: 8),
-            _buildFilterChip(vm, 'OPTION',
+            _buildFilterChip(vm, 'Tùy chọn',
                 dotColor: const Color(0xFFB0BEC5),
-                isSelected: vm.contactPriorityFilter == 'OPTION'),
+                isSelected: vm.contactPriorityFilter == 'Tùy chọn'),
           ],
         ),
       ),
@@ -276,7 +283,7 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
         ),
         child: Row(
           children: [
-            // Avatar
+            // Avatar — hiển thị ảnh nếu có, ngược lại hiển thị chữ cái đầu
             Stack(
               children: [
                 Container(
@@ -286,17 +293,38 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
                     color: Color(0xFFFFEBEE),
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Text(
-                      contact.fullName.isNotEmpty
-                          ? contact.fullName[0].toUpperCase()
-                          : 'A',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFD32F2F),
-                      ),
-                    ),
+                  child: ClipOval(
+                    child: contact.avatar != null && contact.avatar!.isNotEmpty
+                        ? Image.file(
+                            File(contact.avatar!),
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text(
+                                contact.fullName.isNotEmpty
+                                    ? contact.fullName[0].toUpperCase()
+                                    : 'A',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFD32F2F),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              contact.fullName.isNotEmpty
+                                  ? contact.fullName[0].toUpperCase()
+                                  : 'A',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD32F2F),
+                              ),
+                            ),
+                          ),
                   ),
                 ),
                 Positioned(

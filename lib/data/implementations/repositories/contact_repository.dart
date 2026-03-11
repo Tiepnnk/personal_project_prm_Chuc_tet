@@ -48,12 +48,14 @@ class ContactRepository implements IContactRepository {
       isActive: active,
     );
 
-    // 3. Call API to insert
-    await contactApi.create(insertDto);
+    // 3. Call API to insert and get the new contact's ID
+    final newId = await contactApi.create(insertDto);
 
-    // 4. Since we don't return the full ContactDto from create(), we have to fetch all and get the latest
-    final allContacts = await contactApi.getAll();
-    final newContactDto = allContacts.firstWhere((c) => c.phone == phone && c.fullName == fullName && c.userId == currentUserId);
+    // 4. Fetch the newly created contact by ID (efficient single-row query)
+    final newContactDto = await contactApi.getById(newId);
+    if (newContactDto == null) {
+      throw Exception('Failed to retrieve newly created contact');
+    }
 
     // 5. Map back to domain entity
     return contactMapper.map(newContactDto);

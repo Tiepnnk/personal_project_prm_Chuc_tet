@@ -11,13 +11,14 @@ class ContactApi implements IContactApi {
   ContactApi(this.database);
 
   @override
-  Future<void> create(UpdateInsertContactDto req) async {
+  Future<String> create(UpdateInsertContactDto req) async {
     final db = await database.db;
     
     // Generate UUID for the new contact
     final String newId = const Uuid().v4();
     
     await db.insert('contacts', req.toMapForInsert(newId));
+    return newId;
   }
 
   @override

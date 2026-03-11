@@ -40,7 +40,27 @@ HomeViewModel buildHomeVM() {
   final authApi = AuthApi(AppDatabase.instance);
   final authSessionMapper = AuthSessionMapper();
   final authRepository = AuthRepository(api: authApi, mapper: authSessionMapper);
-  return HomeViewModel(repository: authRepository);
+
+  final contactApi = ContactApi(AppDatabase.instance);
+  final contactMapper = ContactMapper();
+  final contactRepository = ContactRepository(
+    contactApi: contactApi,
+    contactMapper: contactMapper,
+    authRepository: authRepository,
+  );
+
+  final wishRecordApi = WishRecordApi(AppDatabase.instance);
+  final wishRecordMapper = WishRecordMapper();
+  final wishRecordRepository = WishRecordRepository(
+    wishRecordApi: wishRecordApi,
+    wishRecordMapper: wishRecordMapper,
+  );
+
+  return HomeViewModel(
+    repository: authRepository,
+    contactRepository: contactRepository,
+    wishRecordRepository: wishRecordRepository,
+  );
 }
 
 ContactViewModel buildContactVM() {

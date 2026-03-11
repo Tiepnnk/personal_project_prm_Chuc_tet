@@ -42,6 +42,9 @@ class _AddContactViewState extends State<_AddContactView> {
   final _phoneController = TextEditingController();
   final _noteController = TextEditingController();
 
+  /// Track the last error message shown to avoid showing it repeatedly
+  String? _lastShownError;
+
   // Danh sách loại quan hệ khớp với enum ContactCategory
   final List<_CategoryOption> _categoryOptions = const [
     _CategoryOption(label: 'Gia đình', category: ContactCategory.family),
@@ -93,6 +96,13 @@ class _AddContactViewState extends State<_AddContactView> {
         phone: _phoneController.text,
         note: _noteController.text,
       );
+
+      if (!mounted) return;
+
+      if (vm.isSaved) {
+        // Pop với result=true để contact_page hiện SnackBar và reload danh sách
+        Navigator.pop(context, true);
+      }
     } else {
       // Add mode → gọi saveContact
       await vm.saveContact(
@@ -101,25 +111,92 @@ class _AddContactViewState extends State<_AddContactView> {
         phone: _phoneController.text,
         note: _noteController.text,
       );
-    }
-
-    if (!mounted) return;
-
-    if (vm.isSaved) {
-      // Reload danh sách liên hệ nếu ContactViewModel đang tồn tại
-      final contactVM = Provider.of<ContactViewModel>(context, listen: false);
-      await contactVM.loadContacts();
 
       if (!mounted) return;
 
-      final message = vm.isEditMode ? 'Cập nhật thành công!' : 'Thêm liên hệ thành công!';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: const Color(0xFF4CAF50),
-        ),
-      );
-      Navigator.pop(context, true);
+      if (vm.isSaved) {
+        // Reload danh sách liên hệ ngầm
+        final contactVM = Provider.of<ContactViewModel>(context, listen: false);
+        contactVM.loadContacts();
+
+        if (!mounted) return;
+
+        // Hỏi người dùng có muốn thêm liên hệ mới nữa không
+        final addMore = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              'Thêm liên hệ mới?',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            content: const Text(
+              'Bạn có muốn tiếp tục thêm liên hệ mới không?',
+              style: TextStyle(fontSize: 15, color: Color(0xFF6B7280)),
+            ),
+            actionsPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            actions: [
+              OutlinedButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF6B7280),
+                  side: const BorderSide(color: Color(0xFFD1D5DB)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                ),
+                child: const Text('Không'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFECA3A3),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                ),
+                child: const Text('Có, thêm tiếp'),
+              ),
+            ],
+          ),
+        );
+
+        if (!mounted) return;
+
+        if (addMore == true) {
+          // Hiện SnackBar ngay tại trang trước khi reset form
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Thêm liên hệ thành công!'),
+              backgroundColor: Color(0xFF4CAF50),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          // Xóa toàn bộ dữ liệu form, ở lại trang
+          _fullNameController.clear();
+          _nicknameController.clear();
+          _phoneController.clear();
+          _noteController.clear();
+          vm.reset();
+        } else {
+          // Quay về contact_page với result=true để hiện SnackBar ở đó
+          Navigator.pop(context, true);
+        }
+      }
     }
   }
 
@@ -129,17 +206,23 @@ class _AddContactViewState extends State<_AddContactView> {
   Widget build(BuildContext context) {
     return Consumer<AddContactViewModel>(
       builder: (context, vm, _) {
-        // Nếu có lỗi chung (server / DB) → hiển thị SnackBar
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (vm.errorMessage != null && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(vm.errorMessage!),
-                backgroundColor: const Color(0xFFD32F2F),
-              ),
-            );
-          }
-        });
+        // Hiển thị SnackBar lỗi chỉ khi errorMessage thay đổi (tránh lặp vô hạn)
+        if (vm.errorMessage != null && vm.errorMessage != _lastShownError && mounted) {
+          _lastShownError = vm.errorMessage;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(vm.errorMessage!),
+                  backgroundColor: const Color(0xFFD32F2F),
+                ),
+              );
+            }
+          });
+        } else if (vm.errorMessage == null) {
+          _lastShownError = null;
+        }
+
 
         return Scaffold(
           backgroundColor: const Color(0xFFFCFAF5),

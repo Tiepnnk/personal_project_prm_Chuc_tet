@@ -93,7 +93,12 @@ class _ChooseWishTemplatePageState extends State<ChooseWishTemplatePage> {
             child: IconButton(
               icon:
                   const Icon(Icons.close, size: 20, color: Color(0xFF546E7A)),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                // Nhấn X → xóa lựa chọn đã chọn và đóng sheet
+                Provider.of<WishViewModel>(context, listen: false)
+                    .deselectTemplate();
+                Navigator.pop(context);
+              },
               constraints: const BoxConstraints(),
               padding: const EdgeInsets.all(8),
             ),
@@ -215,9 +220,12 @@ class _ChooseWishTemplatePageState extends State<ChooseWishTemplatePage> {
 
   Widget _buildTemplateCard(WishTemplate template, WishViewModel vm) {
     final bool isSelected = vm.selectedTemplate?.id == template.id;
+    // Chuyển từ DB format (FAMILY, BOSS...) sang tiếng Việt (Gia đình, Sếp...)
     final tagLabel = template.targetGroups.isNotEmpty
-        ? template.targetGroups.first.toUpperCase()
-        : 'CHUNG';
+        ? template.targetGroups
+            .map((g) => ContactCategoryExtension.fromDbString(g).displayName)
+            .join(', ')
+        : 'Chung';
 
     return GestureDetector(
       onTap: () => vm.selectTemplate(template),

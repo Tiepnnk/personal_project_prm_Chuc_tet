@@ -41,7 +41,16 @@ class _ContactPageState extends State<ContactPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const AddContactPage()),
-                ).then((_) {
+                ).then((result) {
+                  if (result == true && mounted) {
+                    // Hiện SnackBar ngay, rồi reload ngầm
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Thêm liên hệ thành công!'),
+                        backgroundColor: Color(0xFF4CAF50),
+                      ),
+                    );
+                  }
                   _viewModel.loadContacts();
                 });
               },
@@ -107,8 +116,16 @@ class _ContactPageState extends State<ContactPage> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddContactPage()),
-            ).then((_) {
-              // Reload on return just in case a new contact was added
+            ).then((result) {
+              if (result == true && mounted) {
+                // Hiện SnackBar ngay, rồi reload ngầm
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Thêm liên hệ thành công!'),
+                    backgroundColor: Color(0xFF4CAF50),
+                  ),
+                );
+              }
               _viewModel.loadContacts();
             });
           },
@@ -134,7 +151,16 @@ class _ContactPageState extends State<ContactPage> {
           contactToEdit: contact,
         ),
       ),
-    ).then((_) {
+    ).then((result) {
+      if (result == true && mounted) {
+        // Hiện SnackBar ngay, rồi reload ngầm
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chỉnh sửa liên hệ thành công!'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+      }
       _viewModel.loadContacts();
     });
   }
@@ -184,17 +210,24 @@ class _ContactPageState extends State<ContactPage> {
     );
 
     if (confirmed == true) {
+      // Chờ xóa xong rồi mới hiện SnackBar
       await _viewModel.deleteContact(contact.id);
       if (mounted) {
-        final errMsg = _viewModel.errorMessage;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errMsg ?? 'Xóa thành công'),
-            backgroundColor: errMsg != null
-                ? const Color(0xFFEF4444)
-                : const Color(0xFF4CAF50),
-          ),
-        );
+        if (_viewModel.errorMessage == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Xóa thành công'),
+              backgroundColor: Color(0xFF4CAF50),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_viewModel.errorMessage!),
+              backgroundColor: const Color(0xFFD32F2F),
+            ),
+          );
+        }
       }
     }
   }

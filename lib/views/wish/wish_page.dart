@@ -417,8 +417,8 @@ class _WishViewState extends State<_WishView> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              const SizedBox(height: 12),
-              Align(
+                  const SizedBox(height: 12),
+                  Align(
                 alignment: Alignment.bottomRight,
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -654,20 +654,6 @@ class _WishViewState extends State<_WishView> {
               onTap: () async {
                 Navigator.pop(ctx);
                 final ok = await vm.sendViaSms();
-                if (ok && context.mounted) {
-                  _showMarkMessagedDialog(context, vm);
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildSendOption(
-              ctx,
-              icon: Icons.chat,
-              label: 'Zalo',
-              color: const Color(0xFF0068FF),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final ok = await vm.sendViaZalo();
                 if (ok && context.mounted) {
                   _showMarkMessagedDialog(context, vm);
                 }
