@@ -12,6 +12,7 @@ import 'package:personal_project_prm/data/implementations/api/phone_contact_serv
 import 'package:personal_project_prm/viewmodels/profile/profile_viewmodel.dart';
 import 'package:personal_project_prm/data/implementations/api/contact_api.dart';
 import 'package:personal_project_prm/data/implementations/mapper/contact_mapper.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:personal_project_prm/data/implementations/repositories/contact_repository.dart';
 import 'package:personal_project_prm/data/implementations/api/wish_template_api.dart';
 import 'package:personal_project_prm/data/implementations/mapper/wish_template_mapper.dart';
@@ -165,9 +166,9 @@ CreateWishTemplateViewModel buildCreateWishTemplateVM() {
     authRepository: authRepository,
   );
 
-  // Thay APIKey
+  // Lấy API Key
   final openAiService = OpenAiService(
-    apiKey: '',
+    apiKey: dotenv.env['OPENAI_API_KEY'] ?? '',
   );
 
   return CreateWishTemplateViewModel(
