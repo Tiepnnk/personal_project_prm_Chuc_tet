@@ -7,6 +7,7 @@ abstract class IContactApi {
   Future<String> create(UpdateInsertContactDto req);
   Future<int> update(String id,UpdateInsertContactDto req);
   Future<int> delete(String id);
+  Future<ContactDto?> getByPhone(String phone);
 
   Future<void> seedDemoIfEmpty();
 }

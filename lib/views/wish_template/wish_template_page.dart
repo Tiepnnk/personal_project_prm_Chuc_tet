@@ -118,16 +118,37 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
                                 isReadOnly: template.isSystem,
                               ),
                             ),
-                          ).then((_) => vm.loadTemplates());
+                          ).then((result) async {
+                            await vm.loadTemplates();
+                            if (result == 'edited' && context.mounted) {
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Chỉnh sửa mẫu lời chúc thành công!'),
+                                  backgroundColor: Color(0xFF4CAF50),
+                                ),
+                              );
+                            }
+                          });
                         },
                         onDeleteTap: (template) async {
                           final confirm = await _showDeleteDialog(context);
                           if (confirm == true) {
-                            vm.deleteTemplate(template.id);
+                            await vm.deleteTemplate(template.id);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Xóa mẫu lời chúc thành công!'),
+                                  backgroundColor: Color(0xFF4CAF50),
+                                ),
+                              );
+                            }
                           }
                         },
                       ),
             ),
+          const SizedBox(height: 8),
         ],
       ),
       floatingActionButton: _WishFab(onTap: () {
@@ -136,7 +157,18 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
           MaterialPageRoute(
             builder: (_) => const CreateWishTemplatePage(),
           ),
-        ).then((_) => vm.loadTemplates());
+        ).then((result) async {
+          await vm.loadTemplates();
+          if (result == 'created' && context.mounted) {
+            ScaffoldMessenger.of(context).clearSnackBars();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Thêm mẫu lời chúc thành công!'),
+                backgroundColor: Color(0xFF4CAF50),
+              ),
+            );
+          }
+        });
       }),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: const AppBottomNav(currentIndex: NavIndex.wishTemplates),
@@ -507,8 +539,23 @@ class _TemplateList extends StatelessWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      itemCount: templates.length,
+      itemCount: templates.length + 1,
       itemBuilder: (context, i) {
+        if (i == templates.length) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 24),
+            child: Center(
+              child: Text(
+                '🌸 Phiên bản 2.0.26 (Tết Bính Ngọ) 🌸',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade400,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        }
         return _TemplateCard(
           template: templates[i],
           onFavoriteTap: () => onFavoriteTap(templates[i]),

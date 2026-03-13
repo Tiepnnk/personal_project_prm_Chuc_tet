@@ -67,4 +67,71 @@ Yêu cầu:
       rethrow;
     }
   }
+
+  /// Gọi OpenAI ChatCompletion API để gợi ý nội dung lời chúc Tết cá nhân hóa
+  /// [contactName] — tên người nhận
+  /// [relationship] — mối quan hệ (VD: 'Gia đình', 'Sếp', 'Bạn bè')
+  /// [templateContent] — nội dung mẫu lời chúc (optional, nếu có thì AI viết dựa trên mẫu)
+  Future<String> generateWishContent({
+    required String contactName,
+    required String relationship,
+    String? templateContent,
+  }) async {
+    final hasTemplate = templateContent != null && templateContent.trim().isNotEmpty;
+
+    final prompt = '''
+Bạn là chuyên gia viết lời chúc Tết Nguyên Đán bằng tiếng Việt.
+Hãy viết một lời chúc Tết chân thành, cá nhân hóa cho người nhận.
+
+Thông tin người nhận:
+- Tên: $contactName
+- Mối quan hệ: $relationship
+
+${hasTemplate ? 'Mẫu lời chúc tham khảo (hãy viết lại dựa trên mẫu này nhưng cá nhân hóa cho phù hợp):\n"""$templateContent"""' : ''}
+
+Yêu cầu:
+- Viết bằng tiếng Việt, văn phong phù hợp với mối quan hệ "$relationship"
+- Xưng hô phù hợp (VD: con-bố/mẹ, em-anh/chị/sếp, tôi-bạn...)
+- Đề cập trực tiếp tên "$contactName" trong lời chúc
+- Độ dài khoảng 3-5 câu
+- Lời chúc phải tự nhiên, chân thành, không sáo rỗng
+${hasTemplate ? '- PHẢI dựa trên nội dung mẫu đã cho để viết lại, giữ ý chính nhưng cá nhân hóa' : ''}
+- Chỉ trả về NỘI DUNG lời chúc, không giải thích thêm
+''';
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini',
+          'messages': [
+            {'role': 'system', 'content': 'Bạn là trợ lý chuyên viết lời chúc Tết tiếng Việt cá nhân hóa.'},
+            {'role': 'user', 'content': prompt},
+          ],
+          'max_tokens': 500,
+          'temperature': 0.85,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final content = data['choices']?[0]?['message']?['content'] as String?;
+        if (content != null && content.trim().isNotEmpty) {
+          return content.trim();
+        }
+        throw Exception('Phản hồi từ AI rỗng');
+      } else {
+        final errorBody = jsonDecode(response.body);
+        final errorMsg = errorBody['error']?['message'] ?? 'Lỗi không xác định';
+        throw Exception('OpenAI API lỗi (${response.statusCode}): $errorMsg');
+      }
+    } catch (e) {
+      debugPrint('OpenAI API error: $e');
+      rethrow;
+    }
+  }
 }

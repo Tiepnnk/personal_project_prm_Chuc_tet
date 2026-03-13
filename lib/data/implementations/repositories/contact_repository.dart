@@ -97,6 +97,18 @@ class ContactRepository implements IContactRepository {
   }
 
   @override
+  Future<Contact?> getByPhone(String phone) async {
+    final dto = await contactApi.getByPhone(phone);
+    if (dto != null) {
+      final session = await authRepository.getCurrentSession();
+      if (session != null && dto.userId == session.user.id) {
+        return contactMapper.map(dto);
+      }
+    }
+    return null;
+  }
+
+  @override
   Future<void> seedDemoIfEmpty() async {
     await contactApi.seedDemoIfEmpty();
   }

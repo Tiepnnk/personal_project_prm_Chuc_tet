@@ -100,10 +100,20 @@ class _WishViewState extends State<_WishView> {
                 const SizedBox(height: 24),
 
                 // 3. Nội dung lời chúc *
-                const _SectionTitle(title: '3. Nội dung lời chúc', required: true),
-                const SizedBox(height: 12),
                 _buildContentInput(context),
                 if (_showContentError) _buildErrorText('Nội dung không được để trống'),
+                const SizedBox(height: 24),
+                Center(
+                  child: Text(
+                    '🌸 Phiên bản 2.0.26 (Tết Bính Ngọ) 🌸',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade400,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -339,7 +349,11 @@ class _WishViewState extends State<_WishView> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              template.targetGroups.join(', '),
+                              template.targetGroups.isNotEmpty
+                                  ? template.targetGroups
+                                      .map((g) => ContactCategoryExtension.fromDbString(g).displayName)
+                                      .join(', ')
+                                  : 'Chung',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.grey.shade500,
@@ -380,58 +394,145 @@ class _WishViewState extends State<_WishView> {
 
   // 3. CONTENT INPUT
   Widget _buildContentInput(BuildContext context) {
-    final vm = Provider.of<WishViewModel>(context, listen: false);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: vm.contentController,
-                maxLines: 8,
-                minLines: 5,
-                decoration: const InputDecoration(
-                  hintText:
-                      'Viết lời chúc Tết chân thành của bạn tại đây, hoặc chọn một mẫu lời chúc ở trên...',
-                  hintStyle: TextStyle(
-                    color: Color(0xFF9E9E9E),
-                    fontSize: 15,
-                    height: 1.5,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
+    return Consumer<WishViewModel>(
+      builder: (context, vm, _) {
+        final hasContact = vm.selectedContact != null;
+
+        // Hiển thị lỗi AI nếu có
+        if (vm.aiError != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(vm.aiError!),
+                  backgroundColor: const Color(0xFFD32F2F),
+                  duration: const Duration(seconds: 3),
                 ),
+              );
+            }
+          });
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Dòng Title và Nút Gợi ý AI
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0),
+                  child: _SectionTitle(title: '3. Nội dung lời chúc', required: true),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    SizedBox(
+                      height: 38,
+                      child: ElevatedButton.icon(
+                        onPressed: (hasContact && !vm.isGeneratingAi)
+                            ? () => vm.generateAiWishContent()
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7C3AED),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey.shade200,
+                          disabledForegroundColor: Colors.grey.shade400,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        icon: vm.isGeneratingAi
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.auto_awesome, size: 16),
+                        label: Text(
+                          vm.isGeneratingAi ? 'Đang tạo...' : '✨ Gợi ý AI',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (!hasContact)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Vui lòng chọn người\nliên lạc để sử dụng AI',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade500,
+                            fontStyle: FontStyle.italic,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: vm.contentController,
+                    maxLines: 8,
+                    minLines: 5,
+                    decoration: const InputDecoration(
+                      hintText:
+                          'Viết lời chúc Tết chân thành của bạn tại đây, hoặc chọn một mẫu lời chúc ở trên...',
+                      hintStyle: TextStyle(
+                        color: Color(0xFF9E9E9E),
+                        fontSize: 15,
+                        height: 1.5,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Align(
-                alignment: Alignment.bottomRight,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF5F7F9),
-                    shape: BoxShape.circle,
+                    alignment: Alignment.bottomRight,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF5F7F9),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 

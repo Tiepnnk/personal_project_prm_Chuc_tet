@@ -66,7 +66,7 @@ class _CreateWishTemplateViewState extends State<_CreateWishTemplateView> {
     // Lắng nghe khi lưu thành công → pop
     if (vm.isSaved) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) Navigator.pop(context);
+        if (context.mounted) Navigator.pop(context, vm.isEditMode ? 'edited' : 'created');
       });
     }
 

@@ -9,5 +9,6 @@ abstract class IContactRepository {
       String priority,String? note,String? avatar,int active);
   Future<Contact> update(String id,String fullName,String? nickName,String phone,String category,
       String priority,String? note,String? avatar,int active);
+  Future<Contact?> getByPhone(String phone);
   Future<void>  delete(String id);
 }

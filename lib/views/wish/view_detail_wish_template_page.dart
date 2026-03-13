@@ -261,7 +261,7 @@ class ViewDetailWishTemplatePage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'TẾT ẤT TỴ 2026 • AN KHANG THỊNH VƯỢNG',
+            'TẾT BÍNH NGỌ 2026 • AN KHANG THỊNH VƯỢNG',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

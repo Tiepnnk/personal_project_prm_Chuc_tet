@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:personal_project_prm/data/implementations/api/openai_service.dart';
 import 'package:personal_project_prm/data/interfaces/repositories/icontact_repository.dart';
 import 'package:personal_project_prm/data/interfaces/repositories/iwish_record_repository.dart';
 import 'package:personal_project_prm/data/interfaces/repositories/iwish_template_repository.dart';
@@ -12,14 +13,17 @@ class WishViewModel extends ChangeNotifier {
   final IContactRepository _contactRepository;
   final IWishTemplateRepository _wishTemplateRepository;
   final IWishRecordRepository _wishRecordRepository;
+  final OpenAiService _openAiService;
 
   WishViewModel({
     required IContactRepository contactRepository,
     required IWishTemplateRepository wishTemplateRepository,
     required IWishRecordRepository wishRecordRepository,
+    required OpenAiService openAiService,
   })  : _contactRepository = contactRepository,
         _wishTemplateRepository = wishTemplateRepository,
         _wishRecordRepository = wishRecordRepository,
+        _openAiService = openAiService,
         contentController = TextEditingController();
 
   // ─── State ───────────────────────────────────────────────────────────────
@@ -43,6 +47,10 @@ class WishViewModel extends ChangeNotifier {
   bool _isLoadingTemplates = false;
   String? _errorMessage;
 
+  // AI suggestion state
+  bool _isGeneratingAi = false;
+  String? _aiError;
+
   // ─── Getters ─────────────────────────────────────────────────────────────
 
   Contact? get selectedContact => _selectedContact;
@@ -52,6 +60,8 @@ class WishViewModel extends ChangeNotifier {
   bool get isLoadingTemplates => _isLoadingTemplates;
   String? get errorMessage => _errorMessage;
   String get contactPriorityFilter => _contactPriorityFilter;
+  bool get isGeneratingAi => _isGeneratingAi;
+  String? get aiError => _aiError;
   String get contactSearchQuery => _contactSearchQuery;
   String get templateSearchQuery => _templateSearchQuery;
 
@@ -243,6 +253,31 @@ class WishViewModel extends ChangeNotifier {
       }
     } catch (e) {
       _errorMessage = 'Không thể cập nhật yêu thích: ${e.toString()}';
+      notifyListeners();
+    }
+  }
+
+  // ─── AI Suggestion ──────────────────────────────────────────────────────
+
+  /// Gọi OpenAI để gợi ý nội dung lời chúc dựa trên contact và template (nếu có)
+  Future<void> generateAiWishContent() async {
+    if (_selectedContact == null) return;
+
+    _isGeneratingAi = true;
+    _aiError = null;
+    notifyListeners();
+
+    try {
+      final result = await _openAiService.generateWishContent(
+        contactName: _selectedContact!.fullName,
+        relationship: _selectedContact!.category.displayName,
+        templateContent: _selectedTemplate?.content,
+      );
+      contentController.text = result;
+    } catch (e) {
+      _aiError = 'Không thể tạo gợi ý: ${e.toString()}';
+    } finally {
+      _isGeneratingAi = false;
       notifyListeners();
     }
   }

@@ -45,6 +45,10 @@ class _AddContactViewState extends State<_AddContactView> {
   /// Track the last error message shown to avoid showing it repeatedly
   String? _lastShownError;
 
+  /// Cờ theo dõi xem người dùng có từng thêm thành công liên hệ nào trong session này chưa.
+  /// Để khi bấm Quay lại, HomePage sẽ nhận được `true` và hiển thị SnackBar.
+  bool _hasAddedAny = false;
+
   // Danh sách loại quan hệ khớp với enum ContactCategory
   final List<_CategoryOption> _categoryOptions = const [
     _CategoryOption(label: 'Gia đình', category: ContactCategory.family),
@@ -186,6 +190,7 @@ class _AddContactViewState extends State<_AddContactView> {
               duration: Duration(seconds: 2),
             ),
           );
+          _hasAddedAny = true;
           // Xóa toàn bộ dữ liệu form, ở lại trang
           _fullNameController.clear();
           _nicknameController.clear();
@@ -223,11 +228,15 @@ class _AddContactViewState extends State<_AddContactView> {
           _lastShownError = null;
         }
 
-
-        return Scaffold(
-          backgroundColor: const Color(0xFFFCFAF5),
-          appBar: _buildAppBar(vm.isEditMode),
-          body: SafeArea(
+        return WillPopScope(
+          onWillPop: () async {
+            Navigator.pop(context, _hasAddedAny);
+            return false;
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xFFFCFAF5),
+            appBar: _buildAppBar(vm.isEditMode),
+            body: SafeArea(
             child: Column(
               children: [
                 Expanded(
@@ -281,7 +290,7 @@ class _AddContactViewState extends State<_AddContactView> {
               ],
             ),
           ),
-        );
+        ));
       },
     );
   }
@@ -308,7 +317,7 @@ class _AddContactViewState extends State<_AddContactView> {
         child: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new,
               color: Colors.black87, size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, _hasAddedAny),
         ),
       ),
       title: Text(

@@ -244,6 +244,18 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 32),
                       const PrioritySection(),
                       const ReminderBanner(),
+                      const SizedBox(height: 32),
+                      Center(
+                        child: Text(
+                          '🌸 Phiên bản 2.0.26 (Tết Bính Ngọ) 🌸',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade400,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 );
@@ -259,13 +271,6 @@ class _HomePageState extends State<HomePage> {
               LuckyMoneyWidget(onTap: _showLuckyMoneyDialog),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: const Color(0xFFD32F2F),
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
       ),
       bottomNavigationBar: const AppBottomNav(currentIndex: NavIndex.home),
     );

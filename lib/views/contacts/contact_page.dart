@@ -41,9 +41,9 @@ class _ContactPageState extends State<ContactPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const AddContactPage()),
-                ).then((result) {
+                ).then((result) async {
                   if (result == true && mounted) {
-                    // Hiện SnackBar ngay, rồi reload ngầm
+                    ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Thêm liên hệ thành công!'),
@@ -51,7 +51,7 @@ class _ContactPageState extends State<ContactPage> {
                       ),
                     );
                   }
-                  _viewModel.loadContacts();
+                  await _viewModel.loadContacts();
                 });
               },
             ),
@@ -81,14 +81,41 @@ class _ContactPageState extends State<ContactPage> {
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    itemCount: viewModel.filteredContacts.length,
+                    itemCount: viewModel.filteredContacts.length + 1,
                     itemBuilder: (context, index) {
+                      if (index == viewModel.filteredContacts.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 16, bottom: 80),
+                          child: Center(
+                            child: Text(
+                              '🌸 Phiên bản 2.0.26 (Tết Bính Ngọ) 🌸',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade400,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      
                       final contact = viewModel.filteredContacts[index];
                       return ContactCard(
                         contact: contact,
                         wishStatus: viewModel.getWishStatus(contact.id),
                         onEdit: () => _onEditContact(contact),
                         onDelete: () => _onDeleteContact(contact),
+                        isSelectionMode: viewModel.isSelectionMode,
+                        isSelected: viewModel.selectedContactIds.contains(contact.id),
+                        onLongPress: () {
+                          if (!viewModel.isSelectionMode) {
+                            viewModel.toggleSelectionMode();
+                            viewModel.toggleSelectContact(contact.id);
+                          }
+                        },
+                        onSelect: () {
+                          viewModel.toggleSelectContact(contact.id);
+                        },
                       );
                     },
                   );
@@ -116,9 +143,9 @@ class _ContactPageState extends State<ContactPage> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddContactPage()),
-            ).then((result) {
+            ).then((result) async {
               if (result == true && mounted) {
-                // Hiện SnackBar ngay, rồi reload ngầm
+                ScaffoldMessenger.of(context).clearSnackBars();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Thêm liên hệ thành công!'),
@@ -126,7 +153,7 @@ class _ContactPageState extends State<ContactPage> {
                   ),
                 );
               }
-              _viewModel.loadContacts();
+              await _viewModel.loadContacts();
             });
           },
           backgroundColor: const Color(0xFFD32F2F),
@@ -151,9 +178,9 @@ class _ContactPageState extends State<ContactPage> {
           contactToEdit: contact,
         ),
       ),
-    ).then((result) {
+    ).then((result) async {
       if (result == true && mounted) {
-        // Hiện SnackBar ngay, rồi reload ngầm
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Chỉnh sửa liên hệ thành công!'),
@@ -161,7 +188,7 @@ class _ContactPageState extends State<ContactPage> {
           ),
         );
       }
-      _viewModel.loadContacts();
+      await _viewModel.loadContacts();
     });
   }
 
@@ -213,6 +240,7 @@ class _ContactPageState extends State<ContactPage> {
       // Chờ xóa xong rồi mới hiện SnackBar
       await _viewModel.deleteContact(contact.id);
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         if (_viewModel.errorMessage == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

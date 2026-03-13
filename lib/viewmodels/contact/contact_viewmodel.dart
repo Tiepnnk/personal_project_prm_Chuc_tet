@@ -25,12 +25,19 @@ class ContactViewModel extends ChangeNotifier {
   String _searchQuery = '';
   String _selectedCategory = 'Tất cả';
 
+  // State for Selection Mode
+  bool _isSelectionMode = false;
+  final Set<String> _selectedContactIds = {};
+
   // Getters
   List<Contact> get filteredContacts => _filteredContacts;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
   String get selectedCategory => _selectedCategory;
+
+  bool get isSelectionMode => _isSelectionMode;
+  Set<String> get selectedContactIds => _selectedContactIds;
 
   /// Lấy WishStatus của một contact trong năm nay, null nếu chưa có record
   WishStatus? getWishStatus(String contactId) => _wishStatusMap[contactId];
@@ -99,12 +106,74 @@ class ContactViewModel extends ChangeNotifier {
     try {
       await _contactRepository.delete(id);
       _allContacts.removeWhere((c) => c.id == id);
+      _selectedContactIds.remove(id);
       _applyFilters();
       _errorMessage = null;
     } catch (e) {
       _errorMessage = 'Xóa liên hệ thất bại: ${e.toString()}';
     }
     notifyListeners();
+  }
+
+  // ─── Selection Logic ───────────────────────────────────────────────
+
+  void toggleSelectionMode() {
+    _isSelectionMode = !_isSelectionMode;
+    if (!_isSelectionMode) {
+      _selectedContactIds.clear();
+    }
+    notifyListeners();
+  }
+
+  void toggleSelectContact(String id) {
+    if (_selectedContactIds.contains(id)) {
+      _selectedContactIds.remove(id);
+      // Auto-exit selection mode if no items left
+      if (_selectedContactIds.isEmpty) {
+        _isSelectionMode = false;
+      }
+    } else {
+      _selectedContactIds.add(id);
+    }
+    notifyListeners();
+  }
+
+  void selectAll() {
+    _selectedContactIds.clear();
+    for (final contact in _filteredContacts) {
+      _selectedContactIds.add(contact.id);
+    }
+    notifyListeners();
+  }
+
+  void clearSelection() {
+    _selectedContactIds.clear();
+    _isSelectionMode = false;
+    notifyListeners();
+  }
+
+  Future<void> deleteSelectedContacts() async {
+    if (_selectedContactIds.isEmpty) return;
+    
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Note: Ideal would be a batch delete API, but falling back to loop for now
+      for (final id in _selectedContactIds) {
+        await _contactRepository.delete(id);
+        _allContacts.removeWhere((c) => c.id == id);
+      }
+      _selectedContactIds.clear();
+      _isSelectionMode = false;
+      _applyFilters();
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = 'Xóa hàng loạt thất bại: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   /// Apply both Search and Category filters

@@ -7,6 +7,8 @@ import 'package:personal_project_prm/viewmodels/login/login_viewmodel.dart';
 import 'package:personal_project_prm/viewmodels/register/register_viewmodel.dart';
 import 'package:personal_project_prm/viewmodels/contact/contact_viewmodel.dart';
 import 'package:personal_project_prm/viewmodels/contact/add_contact_viewmodel.dart';
+import 'package:personal_project_prm/viewmodels/import_contacts/import_contacts_viewmodel.dart';
+import 'package:personal_project_prm/data/implementations/api/phone_contact_service.dart';
 import 'package:personal_project_prm/viewmodels/profile/profile_viewmodel.dart';
 import 'package:personal_project_prm/data/implementations/api/contact_api.dart';
 import 'package:personal_project_prm/data/implementations/mapper/contact_mapper.dart';
@@ -106,6 +108,27 @@ AddContactViewModel buildAddContactVM() {
   return AddContactViewModel(contactRepository: contactRepository);
 }
 
+ImportContactsViewModel buildImportContactsVM() {
+  final authApi = AuthApi(AppDatabase.instance);
+  final authSessionMapper = AuthSessionMapper();
+  final authRepository = AuthRepository(api: authApi, mapper: authSessionMapper);
+
+  final contactApi = ContactApi(AppDatabase.instance);
+  final contactMapper = ContactMapper();
+  final contactRepository = ContactRepository(
+    contactApi: contactApi,
+    contactMapper: contactMapper,
+    authRepository: authRepository,
+  );
+
+  final phoneContactService = PhoneContactService();
+
+  return ImportContactsViewModel(
+    phoneContactService: phoneContactService,
+    contactRepository: contactRepository,
+  );
+}
+
 ProfileViewModel buildProfileVM() {
   final authApi = AuthApi(AppDatabase.instance);
   final authSessionMapper = AuthSessionMapper();
@@ -142,7 +165,7 @@ CreateWishTemplateViewModel buildCreateWishTemplateVM() {
     authRepository: authRepository,
   );
 
-  // TODO: Thay API key thật của bạn vào đây
+  // Thay APIKey
   final openAiService = OpenAiService(
     apiKey: '',
   );
@@ -181,9 +204,14 @@ WishViewModel buildWishVM() {
     wishRecordMapper: wishRecordMapper,
   );
 
+  final openAiService = OpenAiService(
+    apiKey: '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',
+  );
+
   return WishViewModel(
     contactRepository: contactRepository,
     wishTemplateRepository: wishTemplateRepository,
     wishRecordRepository: wishRecordRepository,
+    openAiService: openAiService,
   );
 }

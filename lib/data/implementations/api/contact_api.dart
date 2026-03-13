@@ -68,6 +68,21 @@ class ContactApi implements IContactApi {
   }
 
   @override
+  Future<ContactDto?> getByPhone(String phone) async {
+    final db = await database.db;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'contacts',
+      where: 'phone = ?',
+      whereArgs: [phone],
+    );
+
+    if (maps.isNotEmpty) {
+      return ContactDto.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  @override
   Future<void> seedDemoIfEmpty() async {
     final db = await database.db;
     final countSqflite = Sqflite.firstIntValue(
