@@ -18,6 +18,8 @@ class ContactPage extends StatefulWidget {
 
 class _ContactPageState extends State<ContactPage> {
   late ContactViewModel _viewModel;
+  // Lưu reference tới ScaffoldMessenger root để tránh mất SnackBar khi rebuild
+  late ScaffoldMessengerState _scaffoldMessenger;
 
   @override
   void initState() {
@@ -27,6 +29,12 @@ class _ContactPageState extends State<ContactPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _viewModel.loadContacts();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
   }
 
   @override
@@ -145,8 +153,8 @@ class _ContactPageState extends State<ContactPage> {
               MaterialPageRoute(builder: (context) => const AddContactPage()),
             ).then((result) async {
               if (result == true && mounted) {
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
+                _scaffoldMessenger.clearSnackBars();
+                _scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     content: Text('Thêm liên hệ thành công!'),
                     backgroundColor: Color(0xFF4CAF50),
@@ -180,8 +188,8 @@ class _ContactPageState extends State<ContactPage> {
       ),
     ).then((result) async {
       if (result == true && mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
+        _scaffoldMessenger.clearSnackBars();
+        _scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Chỉnh sửa liên hệ thành công!'),
             backgroundColor: Color(0xFF4CAF50),
@@ -240,16 +248,16 @@ class _ContactPageState extends State<ContactPage> {
       // Chờ xóa xong rồi mới hiện SnackBar
       await _viewModel.deleteContact(contact.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
+        _scaffoldMessenger.clearSnackBars();
         if (_viewModel.errorMessage == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          _scaffoldMessenger.showSnackBar(
             const SnackBar(
               content: Text('Xóa thành công'),
               backgroundColor: Color(0xFF4CAF50),
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          _scaffoldMessenger.showSnackBar(
             SnackBar(
               content: Text(_viewModel.errorMessage!),
               backgroundColor: const Color(0xFFD32F2F),
