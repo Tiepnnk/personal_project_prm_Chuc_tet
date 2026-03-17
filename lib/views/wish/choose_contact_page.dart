@@ -7,15 +7,16 @@ import 'package:personal_project_prm/viewmodels/wish/wish_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 class ChooseContactPage extends StatefulWidget {
-  const ChooseContactPage({super.key});
+  final bool isMultiSelect;
+  const ChooseContactPage({super.key, this.isMultiSelect = false});
 
   /// Hàm tiện ích để hiển thị trang chọn người liên lạc dưới dạng BottomSheet
-  static Future<void> show(BuildContext context) {
+  static Future<void> show(BuildContext context, {bool isMultiSelect = false}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const ChooseContactPage(),
+      builder: (context) => ChooseContactPage(isMultiSelect: isMultiSelect),
     );
   }
 
@@ -95,9 +96,9 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Chọn người nhận',
-            style: TextStyle(
+          Text(
+            widget.isMultiSelect ? 'Chọn nhiều người (cùng nhóm)' : 'Chọn người nhận',
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFFD32F2F),
@@ -112,8 +113,12 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
               icon: const Icon(Icons.close, size: 20, color: Color(0xFF546E7A)),
               onPressed: () {
                 // Nhấn X → xóa lựa chọn đã chọn và đóng sheet
-                Provider.of<WishViewModel>(context, listen: false)
-                    .deselectContact();
+                final vm = Provider.of<WishViewModel>(context, listen: false);
+                if (widget.isMultiSelect) {
+                  vm.clearBulkContacts();
+                } else {
+                  vm.deselectContact();
+                }
                 Navigator.pop(context);
               },
             ),
@@ -251,19 +256,33 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
           itemCount: contacts.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) =>
-              _buildContactCard(contacts[index], vm),
+              _buildContactCard(contacts[index], vm, widget.isMultiSelect),
         );
       },
     );
   }
 
-  Widget _buildContactCard(Contact contact, WishViewModel vm) {
-    final bool isSelected = vm.selectedContact?.id == contact.id;
+  Widget _buildContactCard(Contact contact, WishViewModel vm, bool isMultiSelect) {
+    final bool isSelected = isMultiSelect 
+        ? vm.selectedContacts.any((c) => c.id == contact.id)
+        : vm.selectedContact?.id == contact.id;
     final priorityColor = _priorityColor(contact.priority);
     final relationshipInfo = _relationshipInfo(contact.category);
 
     return GestureDetector(
-      onTap: () => vm.selectContact(contact),
+      onTap: () {
+        if (isMultiSelect) {
+          try {
+            vm.toggleBulkContact(contact);
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+            );
+          }
+        } else {
+          vm.selectContact(contact);
+        }
+      },
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -417,7 +436,8 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
               width: 20,
               height: 20,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                shape: isMultiSelect ? BoxShape.rectangle : BoxShape.circle,
+                borderRadius: isMultiSelect ? BorderRadius.circular(4) : null,
                 color: isSelected
                     ? const Color(0xFFD32F2F)
                     : Colors.transparent,
@@ -440,6 +460,7 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
   }
 
   Widget _buildBottomButton(BuildContext context) {
+    final vm = Provider.of<WishViewModel>(context);
     return Container(
       padding: EdgeInsets.fromLTRB(
           20, 16, 20, MediaQuery.of(context).padding.bottom + 16),
@@ -451,7 +472,6 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
         width: double.infinity,
         child: ElevatedButton(
           onPressed: () {
-            // Contact đã được lưu trong vm.selectedContact khi tap card
             Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
@@ -462,9 +482,13 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 0,
           ),
-          child: const Text(
-            'Xác nhận chọn',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          child: Text(
+            widget.isMultiSelect 
+              ? (vm.selectedContacts.isEmpty 
+                  ? 'Xác nhận chọn' 
+                  : 'Xác nhận ${vm.selectedContacts.length} người (${vm.bulkRelationship})')
+              : 'Xác nhận chọn',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
       ),

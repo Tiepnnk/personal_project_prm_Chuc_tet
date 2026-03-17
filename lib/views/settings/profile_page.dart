@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:personal_project_prm/di.dart';
 import 'package:personal_project_prm/viewmodels/profile/profile_viewmodel.dart';
+import 'package:personal_project_prm/views/settings/personal_info_page.dart';
+import 'package:personal_project_prm/views/settings/change_password_page.dart';
+import 'package:personal_project_prm/views/settings/about_page.dart';
+import 'package:personal_project_prm/views/settings/help_support_page.dart';
 import 'package:personal_project_prm/views/widgets/app_bottom_nav.dart';
 
 // ─── Wrapper (Provider) ───────────────────────────────────────────────────────
@@ -128,24 +132,39 @@ class _ProfileViewState extends State<_ProfileView> {
                       iconBg: const Color(0xFFFFEDE8),
                       iconColor: const Color(0xFFE57373),
                       label: 'Thông tin cá nhân',
-                      onTap: () {},
+                      onTap: () {
+                        final vm = context.read<ProfileViewModel>();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChangeNotifierProvider<ProfileViewModel>.value(
+                              value: vm,
+                              child: const PersonalInfoPage(),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     _MenuItem(
                       icon: Icons.lock_outline_rounded,
                       iconBg: const Color(0xFFFFEDE8),
                       iconColor: const Color(0xFFE57373),
                       label: 'Đổi mật khẩu',
-                      onTap: () {},
-                    ),
-                    _MenuItem(
-                      icon: Icons.notifications_none_rounded,
-                      iconBg: const Color(0xFFFFF8E3),
-                      iconColor: const Color(0xFFFFC107),
-                      label: 'Cài đặt thông báo',
-                      onTap: () {},
-                      hasDivider: false,
+                      onTap: () {
+                        final vm = context.read<ProfileViewModel>();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChangeNotifierProvider<ProfileViewModel>.value(
+                              value: vm,
+                              child: const ChangePasswordPage(),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ]),
+
                   const SizedBox(height: 16),
 
                   // ── MENU GROUP 2 ────────────────────────
@@ -155,14 +174,14 @@ class _ProfileViewState extends State<_ProfileView> {
                       iconBg: const Color(0xFFE8F0FF),
                       iconColor: const Color(0xFF5C8EFF),
                       label: 'Về ứng dụng',
-                      onTap: () {},
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage())),
                     ),
                     _MenuItem(
                       icon: Icons.help_outline_rounded,
                       iconBg: const Color(0xFFEDE8FF),
                       iconColor: const Color(0xFF9575CD),
                       label: 'Trợ giúp & Hỗ trợ',
-                      onTap: () {},
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportPage())),
                       hasDivider: false,
                     ),
                   ]),

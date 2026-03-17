@@ -58,6 +58,16 @@ class _WishTemplateView extends StatefulWidget {
 class _WishTemplateViewState extends State<_WishTemplateView> {
   bool _isSearchActive = false;
   final TextEditingController _searchController = TextEditingController();
+  late ScaffoldMessengerState _scaffoldMessenger;
+  // Selection mode for bulk delete
+  bool _selectionMode = false;
+  final Set<String> _selectedTemplateIds = {};
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
+  }
 
   @override
   void dispose() {
@@ -74,21 +84,61 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _WishHeader(
-            isSearchActive: _isSearchActive,
-            searchController: _searchController,
-            onSearchToggle: () {
-              setState(() {
-                _isSearchActive = !_isSearchActive;
-                if (!_isSearchActive) {
-                  _searchController.clear();
-                  vm.onSearchChanged('');
-                }
-              });
-            },
-            onSearchChanged: vm.onSearchChanged,
-            onFilterTap: () => _showFilterBottomSheet(context, vm),
-          ),
+          _selectionMode
+              ? _SelectionHeader(
+                  selectedCount: _selectedTemplateIds.length,
+                  onCancel: () {
+                    setState(() {
+                      _selectionMode = false;
+                      _selectedTemplateIds.clear();
+                    });
+                  },
+                  onDelete: () async {
+                    await _showDeleteDialog(context).then((confirm) async {
+                      if (confirm == true) {
+                        for (final id in List<String>.from(_selectedTemplateIds)) {
+                          await vm.deleteTemplate(id);
+                        }
+                        if (mounted) {
+                          setState(() {
+                            _selectionMode = false;
+                            _selectedTemplateIds.clear();
+                          });
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Xóa các mẫu đã chọn thành công!'),
+                              backgroundColor: Color(0xFF4CAF50),
+                            ),
+                          );
+                        }
+                        await vm.loadTemplates();
+                      }
+                    });
+                  },
+                  onSelectAll: () {
+                    setState(() {
+                      _selectionMode = true;
+                      _selectedTemplateIds.clear();
+                      _selectedTemplateIds.addAll(vm.filteredTemplates.where((t) => !t.isSystem).map((t) => t.id));
+                    });
+                  },
+                )
+              : _WishHeader(
+                  isSearchActive: _isSearchActive,
+                  searchController: _searchController,
+                  onSearchToggle: () {
+                    setState(() {
+                      _isSearchActive = !_isSearchActive;
+                      if (!_isSearchActive) {
+                        _searchController.clear();
+                        vm.onSearchChanged('');
+                      }
+                    });
+                  },
+                  onSearchChanged: vm.onSearchChanged,
+                  onFilterTap: () => _showFilterBottomSheet(context, vm),
+                ),
           _CategoryFilter(
             categories: _categories,
             selectedIndex: vm.selectedCategoryIndex,
@@ -120,7 +170,7 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
                             ),
                           ).then((result) async {
                             await vm.loadTemplates();
-                            if (result == 'edited' && context.mounted) {
+                            if (result == 'edited' && mounted) {
                               ScaffoldMessenger.of(context).clearSnackBars();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -135,7 +185,7 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
                           final confirm = await _showDeleteDialog(context);
                           if (confirm == true) {
                             await vm.deleteTemplate(template.id);
-                            if (context.mounted) {
+                            if (mounted) {
                               ScaffoldMessenger.of(context).clearSnackBars();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -144,6 +194,51 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
                                 ),
                               );
                             }
+                            return true;
+                          }
+                          return false;
+                        },
+                        // selection props
+                        selectionMode: _selectionMode,
+                        selectedIds: _selectedTemplateIds,
+                        onLongPressTemplate: (tpl) {
+                                          if (tpl.isSystem) return; // Do nothing for system templates
+                          setState(() {
+                                            _selectionMode = true; // Enable selection mode
+                            _selectedTemplateIds.add(tpl.id);
+                          });
+                        },
+                        onToggleSelect: (tpl) {
+                          setState(() {
+                            if (_selectedTemplateIds.contains(tpl.id)) {
+                              _selectedTemplateIds.remove(tpl.id);
+                            } else {
+                              _selectedTemplateIds.add(tpl.id);
+                            }
+                            if (_selectedTemplateIds.isEmpty) _selectionMode = false;
+                          });
+                        },
+                        onDeleteSelected: () async {
+                          if (_selectedTemplateIds.isEmpty) return;
+                          final confirm = await _showDeleteDialog(context);
+                          if (confirm == true) {
+                            for (final id in List<String>.from(_selectedTemplateIds)) {
+                              await vm.deleteTemplate(id);
+                            }
+                            if (mounted) {
+                              setState(() {
+                                _selectionMode = false;
+                                _selectedTemplateIds.clear();
+                              });
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Xóa các mẫu đã chọn thành công!'),
+                                  backgroundColor: Color(0xFF4CAF50),
+                                ),
+                              );
+                            }
+                            await vm.loadTemplates();
                           }
                         },
                       ),
@@ -159,7 +254,7 @@ class _WishTemplateViewState extends State<_WishTemplateView> {
           ),
         ).then((result) async {
           await vm.loadTemplates();
-          if (result == 'created' && context.mounted) {
+            if (result == 'created' && mounted) {
             ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -458,6 +553,56 @@ class _WishHeader extends StatelessWidget {
   }
 }
 
+class _SelectionHeader extends StatelessWidget {
+  final int selectedCount;
+  final VoidCallback onCancel;
+  final VoidCallback onDelete;
+  final VoidCallback? onSelectAll;
+
+  const _SelectionHeader({
+    required this.selectedCount,
+    required this.onCancel,
+    required this.onDelete,
+    this.onSelectAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.close, color: Color(0xFF424242)),
+              onPressed: onCancel,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '$selectedCount đã chọn',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            if (onSelectAll != null) ...[
+              IconButton(
+                onPressed: onSelectAll,
+                icon: const Icon(Icons.done_all, color: Color(0xFFE53935)),
+                tooltip: 'Chọn tất cả (không chọn mẫu hệ thống)',
+              ),
+            ],
+            IconButton(
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline, color: Color(0xFFE53935)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────
 // WIDGET: CATEGORY FILTER CHIPS
 // ─────────────────────────────────────────
@@ -517,13 +662,23 @@ class _TemplateList extends StatelessWidget {
   final List<WishTemplate> templates;
   final ValueChanged<WishTemplate> onFavoriteTap;
   final ValueChanged<WishTemplate> onCardTap;
-  final ValueChanged<WishTemplate> onDeleteTap;
+  final Future<bool> Function(WishTemplate) onDeleteTap;
+  final bool selectionMode;
+  final Set<String> selectedIds;
+  final ValueChanged<WishTemplate> onLongPressTemplate;
+  final ValueChanged<WishTemplate> onToggleSelect;
+  final VoidCallback onDeleteSelected;
 
   const _TemplateList({
     required this.templates,
     required this.onFavoriteTap,
     required this.onCardTap,
     required this.onDeleteTap,
+    required this.selectionMode,
+    required this.selectedIds,
+    required this.onLongPressTemplate,
+    required this.onToggleSelect,
+    required this.onDeleteSelected,
   });
 
   @override
@@ -556,11 +711,39 @@ class _TemplateList extends StatelessWidget {
             ),
           );
         }
-        return _TemplateCard(
-          template: templates[i],
-          onFavoriteTap: () => onFavoriteTap(templates[i]),
-          onCardTap: () => onCardTap(templates[i]),
-          onDeleteTap: () => onDeleteTap(templates[i]),
+
+        final tpl = templates[i];
+
+        return Dismissible(
+          key: ValueKey(tpl.id),
+          // Disable swipe for system templates or when selection mode active
+          direction: (selectionMode || tpl.isSystem) ? DismissDirection.none : DismissDirection.endToStart,
+          // require ~1/3 of width to trigger dismiss
+          dismissThresholds: const {
+            DismissDirection.endToStart: 0.33,
+          },
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE53935),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.delete_outline, color: Colors.white),
+          ),
+          confirmDismiss: (direction) async {
+            final deleted = await onDeleteTap(tpl);
+            return deleted;
+          },
+          child: _TemplateCard(
+            template: tpl,
+            onFavoriteTap: () => onFavoriteTap(tpl),
+            onCardTap: () => onCardTap(tpl),
+            isSelectionMode: selectionMode,
+            isSelected: selectedIds.contains(tpl.id),
+            onLongPress: tpl.isSystem ? null : () => onLongPressTemplate(tpl),
+            onSelect: tpl.isSystem ? null : () => onToggleSelect(tpl),
+          ),
         );
       },
     );
@@ -575,19 +758,27 @@ class _TemplateCard extends StatelessWidget {
   final WishTemplate template;
   final VoidCallback onFavoriteTap;
   final VoidCallback onCardTap;
-  final VoidCallback onDeleteTap;
+  // delete handled by swipe-to-delete in the list
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onSelect;
 
   const _TemplateCard({
     required this.template,
     required this.onFavoriteTap,
     required this.onCardTap,
-    required this.onDeleteTap,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onLongPress,
+    this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onCardTap,
+      onTap: (isSelectionMode && template.isSystem) ? onCardTap : (isSelectionMode ? onSelect : onCardTap),
+      onLongPress: template.isSystem ? null : onLongPress,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
@@ -603,41 +794,60 @@ class _TemplateCard extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Row 1: Title + Favorite
-              _CardTitleRow(
-                title: template.title,
-                isSystem: template.isSystem,
-                isFavorite: template.isFavorite,
-                onFavoriteTap: onFavoriteTap,
-              ),
-              const SizedBox(height: 10),
+              if (isSelectionMode)
+                (template.isSystem
+                    ? const SizedBox(width: 56)
+                    : Container(
+                        width: 56,
+                        height: 56,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: isSelected ? const Color(0xFFD32F2F) : Colors.grey.shade400,
+                          size: 28,
+                        ),
+                      )),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Row 1: Title + Favorite
+                    _CardTitleRow(
+                      title: template.title,
+                      isSystem: template.isSystem,
+                      isFavorite: template.isFavorite,
+                      onFavoriteTap: onFavoriteTap,
+                    ),
+                    const SizedBox(height: 10),
 
-              // Content preview
-              Text(
-                template.content,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontStyle: FontStyle.italic,
-                  color: Color(0xFF757575),
-                  height: 1.5,
+                    // Content preview
+                    Text(
+                      template.content,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                        color: Color(0xFF757575),
+                        height: 1.5,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Group chips
+                    _GroupChips(groups: template.targetGroups),
+                    const SizedBox(height: 12),
+
+                    // Footer
+                    _CardFooter(
+                      usageCount: template.usageCount,
+                      isSystem: template.isSystem,
+                    ),
+                  ],
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-
-              // Group chips
-              _GroupChips(groups: template.targetGroups),
-              const SizedBox(height: 12),
-
-              // Footer
-              _CardFooter(
-                usageCount: template.usageCount,
-                isSystem: template.isSystem,
-                onDeleteTap: onDeleteTap,
               ),
             ],
           ),
@@ -750,19 +960,20 @@ class _GroupChips extends StatelessWidget {
       children: groups
           .map(
             (g) {
-              final displayName = ContactCategoryExtension.fromDbString(g).displayName;
+              final cat = ContactCategoryExtension.fromDbString(g);
+              final rel = _relationshipInfo(cat);
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _bgGroupChip,
+                  color: rel['bgColor'] as Color,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  displayName,
-                  style: const TextStyle(
+                  rel['label'] as String,
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF616161),
+                    color: rel['textColor'] as Color,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -774,6 +985,59 @@ class _GroupChips extends StatelessWidget {
   }
 }
 
+Map<String, dynamic> _relationshipInfo(ContactCategory category) {
+  switch (category) {
+    case ContactCategory.family:
+      return {
+        'label': 'GIA ĐÌNH',
+        'bgColor': const Color(0xFFE8F5E9),
+        'textColor': const Color(0xFF2E7D32),
+      };
+    case ContactCategory.boss:
+      return {
+        'label': 'SẾP',
+        'bgColor': const Color(0xFFE8EAF6),
+        'textColor': const Color(0xFF3949AB),
+      };
+    case ContactCategory.colleague:
+      return {
+        'label': 'ĐỒNG NGHIỆP',
+        'bgColor': const Color(0xFFE8F5E9),
+        'textColor': const Color(0xFF2E7D32),
+      };
+    case ContactCategory.partner:
+      return {
+        'label': 'ĐỐI TÁC',
+        'bgColor': const Color(0xFFE3F2FD),
+        'textColor': const Color(0xFF1976D2),
+      };
+    case ContactCategory.friend:
+      return {
+        'label': 'BẠN BÈ',
+        'bgColor': const Color(0xFFF3E5F5),
+        'textColor': const Color(0xFF8E24AA),
+      };
+    case ContactCategory.teacher:
+      return {
+        'label': 'THẦY CÔ',
+        'bgColor': const Color(0xFFFFF3E0),
+        'textColor': const Color(0xFFE65100),
+      };
+    case ContactCategory.neighbor:
+      return {
+        'label': 'HÀNG XÓM',
+        'bgColor': const Color(0xFFF1F8E9),
+        'textColor': const Color(0xFF558B2F),
+      };
+    case ContactCategory.other:
+      return {
+        'label': 'KHÁC',
+        'bgColor': const Color(0xFFF5F5F5),
+        'textColor': const Color(0xFF757575),
+      };
+  }
+}
+
 // ─────────────────────────────────────────
 // WIDGET: CARD FOOTER
 // ─────────────────────────────────────────
@@ -781,12 +1045,9 @@ class _GroupChips extends StatelessWidget {
 class _CardFooter extends StatelessWidget {
   final int usageCount;
   final bool isSystem;
-  final VoidCallback onDeleteTap;
-
   const _CardFooter({
     required this.usageCount,
     required this.isSystem,
-    required this.onDeleteTap,
   });
 
   @override
@@ -802,14 +1063,7 @@ class _CardFooter extends StatelessWidget {
         ),
         const Spacer(),
 
-        // Delete chỉ hiện với template cá nhân
-        if (!isSystem) ...[
-          _FooterIconBtn(
-            icon: Icons.delete_outline,
-            color: const Color(0xFFE53935),
-            onTap: onDeleteTap,
-          ),
-        ],
+        // Delete handled by swipe-to-delete; keep footer minimal
       ],
     );
   }

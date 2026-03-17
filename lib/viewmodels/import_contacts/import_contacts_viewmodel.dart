@@ -40,15 +40,15 @@ class ImportContactsViewModel extends ChangeNotifier {
   List<PhoneContact> get duplicateContacts => _classified?.duplicateContacts ?? [];
   List<bool> get changedSelection => _changedSelection;
 
-  /// Tổng liên hệ sẽ import (mới + thay đổi được chọn)
-  int get totalImportCount {
-    final changedCount = _changedSelection.where((s) => s).length;
-    return newContacts.length + changedCount;
-  }
-
-  /// Số liên hệ nhóm mới đã gán đủ relationship + contactLevel
+  /// Tổng liên hệ mới đã gán đủ thông tin (sẽ thực sự được import)
   int get assignedCount =>
       newContacts.where((c) => c.isFullyAssigned).length;
+
+  /// Tổng liên hệ sẽ import (mới đã gán đủ + thay đổi được chọn)
+  int get totalImportCount {
+    final changedCount = _changedSelection.where((s) => s).length;
+    return assignedCount + changedCount;
+  }
 
   /// Trạng thái: tất cả đều trùng
   bool get allDuplicates => _classified?.allDuplicates ?? false;
@@ -135,14 +135,15 @@ class ImportContactsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. INSERT nhóm mới
+      // 1. INSERT nhóm mới — chỉ import những contact đã gán đủ mối quan hệ & mức độ
       for (final pc in newContacts) {
+        if (!pc.isFullyAssigned) continue; // Chưa chọn đủ → bỏ qua
         await _contactRepository.create(
           pc.displayName,
           pc.nickname,
           pc.phone,
-          pc.relationship ?? 'OTHER',     // Mặc định OTHER nếu chưa chọn
-          pc.contactLevel ?? 'OPTIONAL',   // Mặc định OPTIONAL nếu chưa chọn
+          pc.relationship!,
+          pc.contactLevel!,
           null, // note
           pc.avatar,
           1, // isActive
@@ -182,6 +183,11 @@ class ImportContactsViewModel extends ChangeNotifier {
     } finally {
       _isImporting = false;
       notifyListeners();
+
+      // Tải lại & phân loại lại danh bạ sau khi import thành công
+      // → contacts vừa import sẽ được nhận diện là trùng và không hiện lại
+      // → tránh người dùng vô tình import lại gây duplicate
+      await loadPhoneContacts();
     }
   }
 }

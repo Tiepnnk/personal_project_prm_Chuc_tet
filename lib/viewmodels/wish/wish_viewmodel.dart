@@ -31,6 +31,8 @@ class WishViewModel extends ChangeNotifier {
   final TextEditingController contentController;
 
   Contact? _selectedContact;
+  List<Contact> _selectedContacts = [];
+  List<Contact> _contactsToConfirm = [];
   WishTemplate? _selectedTemplate;
   WishRecord? _activeRecord;
 
@@ -54,6 +56,10 @@ class WishViewModel extends ChangeNotifier {
   // ─── Getters ─────────────────────────────────────────────────────────────
 
   Contact? get selectedContact => _selectedContact;
+  List<Contact> get selectedContacts => _selectedContacts;
+  bool get isMultiSelect => _selectedContacts.length >= 2;
+  String? get bulkRelationship => _selectedContacts.isNotEmpty ? _selectedContacts.first.category.displayName : null;
+  List<Contact> get contactsToConfirm => _contactsToConfirm;
   WishTemplate? get selectedTemplate => _selectedTemplate;
   WishRecord? get activeRecord => _activeRecord;
   bool get isLoadingContacts => _isLoadingContacts;
@@ -155,16 +161,22 @@ class WishViewModel extends ChangeNotifier {
   }
 
   void selectContact(Contact contact) {
-    // Toggle: nếu đã chọn contact này rồi → bỏ chọn
-    if (_selectedContact?.id == contact.id) {
-      _selectedContact = null;
-      _selectedTemplate = null;
-      contentController.clear();
+    // Toggle: nếu đã chọn contact này rồi → bỏ chọn (trong chế độ single sẽ là contact duy nhất)
+    if (_selectedContacts.any((c) => c.id == contact.id)) {
+      _selectedContacts.removeWhere((c) => c.id == contact.id);
+      if (_selectedContacts.isEmpty) {
+        _selectedContact = null;
+        _selectedTemplate = null;
+        contentController.clear();
+      } else {
+        _selectedContact = _selectedContacts.first;
+      }
       _activeRecord = null;
       notifyListeners();
       return;
     }
     _selectedContact = contact;
+    _selectedContacts = [contact];
     // Reset template và content khi đổi contact
     _selectedTemplate = null;
     contentController.clear();
@@ -172,14 +184,45 @@ class WishViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleBulkContact(Contact contact) {
+    if (_selectedContacts.isEmpty) {
+      _selectedContacts.add(contact);
+      _selectedContact = contact;
+    } else {
+      if (_selectedContacts.any((c) => c.id == contact.id)) {
+        _selectedContacts.removeWhere((c) => c.id == contact.id);
+        if (_selectedContacts.isEmpty) {
+          _selectedContact = null;
+          _selectedTemplate = null;
+          contentController.clear();
+        } else {
+          _selectedContact = _selectedContacts.first;
+        }
+      } else {
+        if (contact.category.displayName != bulkRelationship) {
+          return;
+          // throw Exception(
+          //     // 'Chỉ chọn cùng mối quan hệ ($bulkRelationship)'
+          // );
+        }
+        _selectedContacts.add(contact);
+      }
+    }
+    _activeRecord = null;
+    notifyListeners();
+  }
+
   /// Xóa lựa chọn contact hiện tại
   void deselectContact() {
     _selectedContact = null;
+    _selectedContacts.clear();
     _selectedTemplate = null;
     contentController.clear();
     _activeRecord = null;
     notifyListeners();
   }
+
+  void clearBulkContacts() => deselectContact();
 
   void setContactFilter(String priority) {
     _contactPriorityFilter = priority;
@@ -261,18 +304,27 @@ class WishViewModel extends ChangeNotifier {
 
   /// Gọi OpenAI để gợi ý nội dung lời chúc dựa trên contact và template (nếu có)
   Future<void> generateAiWishContent() async {
-    if (_selectedContact == null) return;
+    if (_selectedContacts.isEmpty) return;
 
     _isGeneratingAi = true;
     _aiError = null;
     notifyListeners();
 
     try {
-      final result = await _openAiService.generateWishContent(
-        contactName: _selectedContact!.fullName,
-        relationship: _selectedContact!.category.displayName,
-        templateContent: _selectedTemplate?.content,
-      );
+      String result;
+      if (isMultiSelect) {
+        result = await _openAiService.generateGroupWishContent(
+          relationship: bulkRelationship!,
+          memberCount: _selectedContacts.length,
+          templateContent: _selectedTemplate?.content,
+        );
+      } else {
+        result = await _openAiService.generateWishContent(
+          contactName: _selectedContact!.fullName,
+          relationship: _selectedContact!.category.displayName,
+          templateContent: _selectedTemplate?.content,
+        );
+      }
       contentController.text = result;
     } catch (e) {
       _aiError = 'Không thể tạo gợi ý: ${e.toString()}';
@@ -329,6 +381,7 @@ class WishViewModel extends ChangeNotifier {
     // Reset
     _activeRecord = null;
     _selectedContact = null;
+    _selectedContacts.clear();
     _selectedTemplate = null;
     contentController.clear();
     notifyListeners();
@@ -345,27 +398,29 @@ class WishViewModel extends ChangeNotifier {
 
   /// Xử lý khi gửi qua SMS native
   Future<bool> sendViaSms() async {
-    if (_selectedContact == null) return false;
-    final phone = _selectedContact!.phone.replaceAll(' ', '');
+    if (_selectedContacts.isEmpty) return false;
+    final phones = _selectedContacts.map((c) => c.phone.replaceAll(' ', '')).join(',');
     final body = Uri.encodeComponent(contentController.text.trim());
-    final uri = Uri.parse('sms:$phone?body=$body');
+    final uri = Uri.parse('sms:$phones?body=$body');
     if (!await canLaunchUrl(uri)) return false;
     await launchUrl(uri);
     return true;
   }
+  
+  void initConfirmStates() {
+    _contactsToConfirm = List.from(_selectedContacts);
+    notifyListeners();
+  }
 
-
-  /// Gọi sau khi người dùng xác nhận đã gửi thành công
-  Future<void> markAsMessaged() async {
-    if (_selectedContact == null) return;
+  Future<void> markContactAsMessaged(Contact contact) async {
     final year = DateTime.now().year;
-    _activeRecord ??= await _wishRecordRepository.getOrCreate(
-      _selectedContact!.id,
+    final record = await _wishRecordRepository.getOrCreate(
+      contact.id,
       year,
     );
 
     await _wishRecordRepository.updateStatus(
-      _activeRecord!.id,
+      record.id,
       WishStatus.messaged,
       completedAt: DateTime.now(),
       customMessage: contentController.text.trim().isNotEmpty
@@ -374,20 +429,26 @@ class WishViewModel extends ChangeNotifier {
       templateUsedId: _selectedTemplate?.id,
     );
 
+    _allPendingContacts.removeWhere((c) => c.id == contact.id);
+    _contactsToConfirm.removeWhere((c) => c.id == contact.id);
+    notifyListeners();
+  }
+
+  void skipContact(Contact contact) {
+    _contactsToConfirm.removeWhere((c) => c.id == contact.id);
+    notifyListeners();
+  }
+
+  void completeConfirmFlow() {
     if (_selectedTemplate != null) {
-      await _wishTemplateRepository.incrementUsage(_selectedTemplate!.id);
+      _wishTemplateRepository.incrementUsage(_selectedTemplate!.id);
     }
-
-    // Xóa contact đã nhắn khỏi danh sách pending
-    if (_selectedContact != null) {
-      _allPendingContacts.removeWhere((c) => c.id == _selectedContact!.id);
-    }
-
-    // Reset
-    _activeRecord = null;
+    _selectedContacts.clear();
     _selectedContact = null;
     _selectedTemplate = null;
     contentController.clear();
+    _activeRecord = null;
+    _contactsToConfirm.clear();
     notifyListeners();
   }
 

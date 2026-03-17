@@ -109,9 +109,27 @@ class ContactAppBar extends StatelessWidget {
             child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              viewModel.deleteSelectedContacts();
+              await viewModel.deleteSelectedContacts();
+              // Show result SnackBar
+              if (viewModel.errorMessage == null) {
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Xóa liên hệ thành công!'),
+                    backgroundColor: Color(0xFF4CAF50),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(viewModel.errorMessage!),
+                    backgroundColor: const Color(0xFFD32F2F),
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD32F2F),

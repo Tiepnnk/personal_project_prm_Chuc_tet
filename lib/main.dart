@@ -10,7 +10,7 @@ import 'package:personal_project_prm/viewmodels/wish/wish_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
@@ -32,6 +32,14 @@ class MyApp extends StatelessWidget{
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('vi', 'VN'),
+        ],
         home: const SplashPage(), // Kiểm tra session → HomePage hoặc LoginPage
         routes: {
           '/login': (context) => const LoginPage(),

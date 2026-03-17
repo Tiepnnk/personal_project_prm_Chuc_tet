@@ -64,7 +64,7 @@ class _WishViewState extends State<_WishView> {
 
   /// Kiểm tra hợp lệ. Trả về true nếu thoả điều kiện.
   bool _validate(WishViewModel vm) {
-    final hasContact = vm.selectedContact != null;
+    final hasContact = vm.selectedContacts.isNotEmpty;
     final hasContent = vm.contentController.text.trim().isNotEmpty;
     setState(() {
       _showContactError = !hasContact;
@@ -178,23 +178,26 @@ class _WishViewState extends State<_WishView> {
   Widget _buildContactSelection(BuildContext context) {
     return Consumer<WishViewModel>(
       builder: (context, vm, _) {
-        final contact = vm.selectedContact;
+        final contacts = vm.selectedContacts;
+        final isMulti = vm.isMultiSelect;
+        final hasContact = contacts.isNotEmpty;
+        
         // Auto-xoá lỗi khi đã chọn contact
-        if (contact != null && _showContactError) {
+        if (hasContact && _showContactError) {
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => setState(() => _showContactError = false),
           );
         }
         return GestureDetector(
           onTap: () async {
-            await ChooseContactPage.show(context);
+            await ChooseContactPage.show(context, isMultiSelect: true);
           },
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: contact != null
+              border: hasContact
                   ? Border.all(color: const Color(0xFFFFCDD2), width: 1.5)
                   : null,
               boxShadow: [
@@ -211,50 +214,69 @@ class _WishViewState extends State<_WishView> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: contact != null
+                    color: hasContact
                         ? const Color(0xFFFFEBEE)
                         : const Color(0xFFEFF3F8),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: contact != null
-                        ? Text(
-                            contact.fullName.isNotEmpty
-                                ? contact.fullName[0].toUpperCase()
-                                : 'A',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFD32F2F),
-                            ),
-                          )
+                    child: hasContact
+                        ? (isMulti
+                            ? const Icon(Icons.group, color: Color(0xFFD32F2F))
+                            : Text(
+                                contacts.first.fullName.isNotEmpty
+                                    ? contacts.first.fullName[0].toUpperCase()
+                                    : 'A',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFD32F2F),
+                                ),
+                              ))
                         : const Icon(Icons.person, color: Color(0xFF78909C)),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: contact != null
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              contact.fullName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A1A1A),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${contact.phone}  •  ${contact.category.displayName}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        )
+                  child: hasContact
+                      ? (isMulti 
+                          ? Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                ...contacts.map((c) => Chip(
+                                  label: Text(c.nickname ?? c.fullName, style: const TextStyle(fontSize: 13)),
+                                  backgroundColor: const Color(0xFFF5F5F5),
+                                  side: BorderSide.none,
+                                )),
+                                Chip(
+                                  label: Text('👥 ${vm.bulkRelationship} - ${contacts.length}', style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold)),
+                                  backgroundColor: const Color(0xFFD32F2F),
+                                  side: BorderSide.none,
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  contacts.first.fullName,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1A1A1A),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${contacts.first.phone}  •  ${contacts.first.category.displayName}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ))
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -396,7 +418,7 @@ class _WishViewState extends State<_WishView> {
   Widget _buildContentInput(BuildContext context) {
     return Consumer<WishViewModel>(
       builder: (context, vm, _) {
-        final hasContact = vm.selectedContact != null;
+        final hasContact = vm.selectedContacts.isNotEmpty;
 
         // Hiển thị lỗi AI nếu có
         if (vm.aiError != null) {
@@ -452,11 +474,11 @@ class _WishViewState extends State<_WishView> {
                                 child: CircularProgressIndicator(
                                   color: Colors.white,
                                   strokeWidth: 2,
-                                ),
+                                )
                               )
                             : const Icon(Icons.auto_awesome, size: 16),
                         label: Text(
-                          vm.isGeneratingAi ? 'Đang tạo...' : '✨ Gợi ý AI',
+                          vm.isGeneratingAi ? 'Đang tạo...' : (vm.isMultiSelect ? '✨ AI gợi ý lời chúc nhóm' : '✨ Gợi ý AI'),
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -538,6 +560,7 @@ class _WishViewState extends State<_WishView> {
 
   // BOTTOM ACTIONS
   Widget _buildBottomActions(BuildContext context) {
+    final vm = Provider.of<WishViewModel>(context);
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -579,21 +602,26 @@ class _WishViewState extends State<_WishView> {
           const SizedBox(width: 12),
           Expanded(
             flex: 1,
-            child: ElevatedButton.icon(
-              onPressed: () => _onCallWish(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD32F2F),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            child: Tooltip(
+              message: vm.isMultiSelect ? "Chỉ dùng khi chọn 1 người" : "",
+              child: ElevatedButton.icon(
+                onPressed: (vm.selectedContacts.isNotEmpty && !vm.isMultiSelect) ? () => _onCallWish(context) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD32F2F),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  disabledForegroundColor: Colors.grey.shade500,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
                 ),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.phone, size: 20),
-              label: const Text(
-                'Gọi chúc Tết',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                icon: const Icon(Icons.phone, size: 20),
+                label: const Text(
+                  'Gọi chúc Tết',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),
@@ -756,7 +784,8 @@ class _WishViewState extends State<_WishView> {
                 Navigator.pop(ctx);
                 final ok = await vm.sendViaSms();
                 if (ok && context.mounted) {
-                  _showMarkMessagedDialog(context, vm);
+                  vm.initConfirmStates();
+                  _startConfirmFlow(context, vm);
                 }
               },
             ),
@@ -772,7 +801,8 @@ class _WishViewState extends State<_WishView> {
                 if (content.isNotEmpty) {
                   await Share.share(content);
                   if (context.mounted) {
-                    _showMarkMessagedDialog(context, vm);
+                    vm.initConfirmStates();
+                    _startConfirmFlow(context, vm);
                   }
                 }
               },
@@ -819,24 +849,47 @@ class _WishViewState extends State<_WishView> {
     );
   }
 
-  void _showMarkMessagedDialog(BuildContext context, WishViewModel vm) {
+  void _startConfirmFlow(BuildContext context, WishViewModel vm) {
+    if (vm.contactsToConfirm.isEmpty) {
+      final total = vm.selectedContacts.length;
+      vm.completeConfirmFlow();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã ghi nhận $total/$total người.'),
+          backgroundColor: const Color(0xFF4CAF50),
+        ),
+      );
+      return;
+    }
+    
+    final currentContact = vm.contactsToConfirm.first;
+    final contactString = currentContact.fullName;
+    final total = vm.selectedContacts.length;
+    final confirmed = total - vm.contactsToConfirm.length;
+
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Xác nhận'),
-        content: Text(
-          'Bạn đã gửi lời chúc đến ${vm.selectedContact?.fullName ?? ''}?',
-        ),
+        title: Text('Xác nhận (${confirmed + 1}/$total)'),
+        content: Text('Bạn đã gửi lời chúc đến $contactString chưa?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Chưa', style: TextStyle(color: Colors.grey)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              vm.skipContact(currentContact);
+              _startConfirmFlow(context, vm);
+            },
+            child: const Text('Chưa / Bỏ qua', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await vm.markAsMessaged();
+              await vm.markContactAsMessaged(currentContact);
+              if (context.mounted) {
+                _startConfirmFlow(context, vm);
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD32F2F),

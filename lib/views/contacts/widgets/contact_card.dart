@@ -43,27 +43,66 @@ class ContactCard extends StatelessWidget {
     return '?';
   }
 
-  Color _getAvatarColorForCategory(String dbCategory) {
-    switch (dbCategory) {
-      case 'FAMILY': return const Color(0xFFFFCCDF);
-      case 'BOSS': return const Color(0xFFE2C9A4);
-      case 'COLLEAGUE': return const Color(0xFFD1E4FF);
-      case 'PARTNER': return const Color(0xFFFEE2E2);
-      case 'FRIEND': return const Color(0xFFC7D2FE);
-      case 'TEACHER': return const Color(0xFFD1FAE5);
-      case 'NEIGHBOR': return const Color(0xFFFEF3C7);
-      case 'OTHER':
-      default: return const Color(0xFFE5E7EB);
+  Map<String, dynamic> _relationshipInfo(ContactCategory category) {
+    switch (category) {
+      case ContactCategory.family:
+        return {
+          'label': 'GIA ĐÌNH',
+          'bgColor': const Color(0xFFE8F5E9),
+          'textColor': const Color(0xFF2E7D32),
+        };
+      case ContactCategory.boss:
+        return {
+          'label': 'SẾP',
+          'bgColor': const Color(0xFFE8EAF6),
+          'textColor': const Color(0xFF3949AB),
+        };
+      case ContactCategory.colleague:
+        return {
+          'label': 'ĐỒNG NGHIỆP',
+          'bgColor': const Color(0xFFE8F5E9),
+          'textColor': const Color(0xFF2E7D32),
+        };
+      case ContactCategory.partner:
+        return {
+          'label': 'ĐỐI TÁC',
+          'bgColor': const Color(0xFFE3F2FD),
+          'textColor': const Color(0xFF1976D2),
+        };
+      case ContactCategory.friend:
+        return {
+          'label': 'BẠN BÈ',
+          'bgColor': const Color(0xFFF3E5F5),
+          'textColor': const Color(0xFF8E24AA),
+        };
+      case ContactCategory.teacher:
+        return {
+          'label': 'THẦY CÔ',
+          'bgColor': const Color(0xFFFFF3E0),
+          'textColor': const Color(0xFFE65100),
+        };
+      case ContactCategory.neighbor:
+        return {
+          'label': 'HÀNG XÓM',
+          'bgColor': const Color(0xFFF1F8E9),
+          'textColor': const Color(0xFF558B2F),
+        };
+      case ContactCategory.other:
+        return {
+          'label': 'KHÁC',
+          'bgColor': const Color(0xFFF5F5F5),
+          'textColor': const Color(0xFF757575),
+        };
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final String initials = _getInitials(contact.fullName);
-    final Color avatarColor = _getAvatarColorForCategory(contact.category.toDbString);
+    final rel = _relationshipInfo(contact.category);
+    final Color avatarColor = rel['bgColor'] as Color;
 
     // Convert Enum to UI String mappings
-    final String categoryStr = contact.category.displayName.toUpperCase();
     final String priorityStr = contact.priority.displayName;
 
     return GestureDetector(
@@ -147,29 +186,34 @@ class ContactCard extends StatelessWidget {
                               Row(
                                 children: [
                                   Flexible(
-                                    child: Text(
-                                      contact.fullName +
-                                          (contact.nickname != null && contact.nickname!.isNotEmpty
-                                              ? ' (${contact.nickname})'
-                                              : ''),
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF1F2937),
-                                      ),
-                                      maxLines: 1,
+                                    child: Text.rich(
+                                      TextSpan(children: [
+                                        TextSpan(
+                                            text: contact.fullName,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                        if (contact.nickname != null && contact.nickname!.isNotEmpty)
+                                          TextSpan(text: ' - ${contact.nickname}', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                                      ]),
                                       overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                categoryStr,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF3B82F6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: rel['bgColor'] as Color,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  rel['label'] as String,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: rel['textColor'] as Color,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 8),

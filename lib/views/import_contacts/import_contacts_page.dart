@@ -295,7 +295,7 @@ class _ImportContactsView extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                     )
                   : Text(
-                      'Import ${vm.totalImportCount} liên hệ (${vm.assignedCount} đã gán)',
+                      'Import ${vm.totalImportCount - 1} liên hệ (${vm.assignedCount}/${vm.newContacts.length} đã gán)',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
             ),
@@ -328,6 +328,7 @@ class _ImportContactsView extends StatelessWidget {
   }
 
   Future<void> _onImport(BuildContext context, ImportContactsViewModel vm) async {
+    final countSnapshot = vm.totalImportCount; // Lưu lại trước khi import
     final success = await vm.importContacts();
     if (!context.mounted) return;
 
@@ -335,7 +336,7 @@ class _ImportContactsView extends StatelessWidget {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Import ${vm.totalImportCount} liên hệ thành công!'),
+          content: Text('Import $countSnapshot liên hệ thành công!'),
           backgroundColor: const Color(0xFF4CAF50),
         ),
       );
