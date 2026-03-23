@@ -206,7 +206,7 @@ WishViewModel buildWishVM() {
   );
 
   final openAiService = OpenAiService(
-    apiKey: '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',
+    apiKey: dotenv.env['OPENAI_API_KEY'] ?? '',
   );
 
   return WishViewModel(
