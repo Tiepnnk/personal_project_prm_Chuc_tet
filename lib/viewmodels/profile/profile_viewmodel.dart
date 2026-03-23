@@ -19,6 +19,41 @@ class ProfileViewModel extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  // Ảnh đang chờ xác nhận lưu (chưa lưu vào DB)
+  String? _pendingAvatarPath;
+  String? get pendingAvatarPath => _pendingAvatarPath;
+
+  void setPendingAvatar(String path) {
+    _pendingAvatarPath = path;
+    notifyListeners();
+  }
+
+  void cancelPendingAvatar() {
+    _pendingAvatarPath = null;
+    notifyListeners();
+  }
+
+  Future<void> savePendingAvatar() async {
+    if (_pendingAvatarPath == null) return;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final session = await _repository.getCurrentSession();
+      if (session == null) throw Exception('Không tìm thấy phiên đăng nhập');
+      final userId = session.user.id;
+      final db = await AppDatabase.instance.db;
+      await db.update('users', {'avatar': _pendingAvatarPath}, where: 'id = ?', whereArgs: [userId]);
+      _pendingAvatarPath = null;
+      _errorMessage = null;
+      await loadUser();
+    } catch (e) {
+      _errorMessage = 'Không thể lưu ảnh đại diện';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loadUser() async {
     _isLoading = true;
     notifyListeners();

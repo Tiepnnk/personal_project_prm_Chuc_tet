@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:personal_project_prm/di.dart';
 import 'package:personal_project_prm/viewmodels/profile/profile_viewmodel.dart';
@@ -34,6 +35,8 @@ class _ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<_ProfileView> {
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +91,118 @@ class _ProfileViewState extends State<_ProfileView> {
     }
   }
 
+  // ─── Avatar Actions ──────────────────────────────────────────────────────────
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
+      if (file != null && mounted) {
+        context.read<ProfileViewModel>().setPendingAvatar(file.path);
+      }
+    } catch (e) {
+      debugPrint('Lỗi chọn ảnh: $e');
+    }
+  }
+
+  void _showAvatarOptions(String? avatarPath) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (avatarPath != null) ...[
+              ListTile(
+                leading: const Icon(Icons.remove_red_eye_rounded, color: Colors.blue),
+                title: const Text('Xem ảnh đại diện',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showImageFullScreen(avatarPath);
+                },
+              ),
+            ],
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.green),
+              title: Text(
+                avatarPath != null ? 'Đổi ảnh từ thư viện' : 'Chọn ảnh từ thư viện',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.cancel, color: Colors.red),
+              title: const Text('Huỷ', style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.red)),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImageFullScreen(String avatarPath) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.8,
+              maxScale: 4.0,
+              child: Image.file(File(avatarPath), fit: BoxFit.contain),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Show snackbar ───────────────────────────────────────────────────────────
+
+  void _showSnackBar(String msg, {required bool success}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w500)),
+        backgroundColor: success ? const Color(0xFF4CAF50) : const Color(0xFFD32F2F),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
   // ─── Build ───────────────────────────────────────────────────────────────────
 
   @override
@@ -107,9 +222,11 @@ class _ProfileViewState extends State<_ProfileView> {
             final displayName =
                 (user?.fullName?.isNotEmpty == true) ? user!.fullName! : (user?.userName ?? 'Người dùng');
             final username = '@${user?.userName ?? 'unknown'}';
-            final avatarPath = user?.avatar;
+            final savedAvatarPath = user?.avatar;
+            // Hiển thị pending nếu có, ngược lại hiển thị avatar đã lưu
+            final displayAvatarPath = vm.pendingAvatarPath ?? savedAvatarPath;
+            final hasPending = vm.pendingAvatarPath != null;
 
-            // Initials for fallback avatar
             final initials = displayName.trim().isNotEmpty
                 ? displayName.trim().split(' ').length >= 2
                     ? '${displayName.trim().split(' ').first[0]}${displayName.trim().split(' ').last[0]}'.toUpperCase()
@@ -122,7 +239,7 @@ class _ProfileViewState extends State<_ProfileView> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // ── HEADER ──────────────────────────────
-                  _buildHeader(avatarPath, initials, displayName, username),
+                  _buildHeader(displayAvatarPath, initials, displayName, username, hasPending, vm),
                   const SizedBox(height: 32),
 
                   // ── MENU GROUP 1 ────────────────────────
@@ -132,9 +249,9 @@ class _ProfileViewState extends State<_ProfileView> {
                       iconBg: const Color(0xFFFFEDE8),
                       iconColor: const Color(0xFFE57373),
                       label: 'Thông tin cá nhân',
-                      onTap: () {
+                      onTap: () async {
                         final vm = context.read<ProfileViewModel>();
-                        Navigator.push(
+                        final result = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                             builder: (_) => ChangeNotifierProvider<ProfileViewModel>.value(
@@ -143,6 +260,9 @@ class _ProfileViewState extends State<_ProfileView> {
                             ),
                           ),
                         );
+                        if (result == true && mounted) {
+                          _showSnackBar('Cập nhật thông tin thành công ✓', success: true);
+                        }
                       },
                     ),
                     _MenuItem(
@@ -150,9 +270,9 @@ class _ProfileViewState extends State<_ProfileView> {
                       iconBg: const Color(0xFFFFEDE8),
                       iconColor: const Color(0xFFE57373),
                       label: 'Đổi mật khẩu',
-                      onTap: () {
+                      onTap: () async {
                         final vm = context.read<ProfileViewModel>();
-                        Navigator.push(
+                        final result = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                             builder: (_) => ChangeNotifierProvider<ProfileViewModel>.value(
@@ -161,6 +281,9 @@ class _ProfileViewState extends State<_ProfileView> {
                             ),
                           ),
                         );
+                        if (result == true && mounted) {
+                          _showSnackBar('Đổi mật khẩu thành công ✓', success: true);
+                        }
                       },
                     ),
                   ]),
@@ -214,7 +337,16 @@ class _ProfileViewState extends State<_ProfileView> {
   // ─── Header ──────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(
-      String? avatarPath, String initials, String displayName, String username) {
+      String? displayAvatarPath,
+      String initials,
+      String displayName,
+      String username,
+      bool hasPending,
+      ProfileViewModel vm) {
+    final hasAvatar = displayAvatarPath != null &&
+        displayAvatarPath.isNotEmpty &&
+        File(displayAvatarPath).existsSync();
+
     return Column(
       children: [
         // Decorative top cherry blossom row
@@ -227,42 +359,121 @@ class _ProfileViewState extends State<_ProfileView> {
         ),
         const SizedBox(height: 8),
 
-        // Avatar
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFE8C99A), width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.orange.withValues(alpha: 0.15),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+        // Avatar với tap để chọn ảnh
+        GestureDetector(
+          onTap: () => _showAvatarOptions(hasAvatar ? displayAvatarPath : null),
+          child: Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: hasPending ? const Color(0xFFD32F2F) : const Color(0xFFE8C99A),
+                    width: hasPending ? 3.5 : 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 52,
+                  backgroundColor: const Color(0xFFFFF3E0),
+                  backgroundImage: hasAvatar ? FileImage(File(displayAvatarPath!)) : null,
+                  child: !hasAvatar
+                      ? Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFD32F2F),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+              // Camera icon overlay
+              Positioned(
+                bottom: 2,
+                right: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: hasPending ? const Color(0xFFD32F2F) : Colors.grey[100],
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.camera_alt,
+                    size: 14,
+                    color: hasPending ? Colors.white : Colors.black87,
+                  ),
+                ),
               ),
             ],
           ),
-          child: CircleAvatar(
-            radius: 52,
-            backgroundColor: const Color(0xFFFFF3E0),
-            backgroundImage: (avatarPath != null &&
-                    avatarPath.isNotEmpty &&
-                    File(avatarPath).existsSync())
-                ? FileImage(File(avatarPath))
-                : null,
-            child: (avatarPath == null ||
-                    avatarPath.isEmpty ||
-                    !File(avatarPath).existsSync())
-                ? Text(
-                    initials,
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFD32F2F),
-                    ),
-                  )
-                : null,
-          ),
         ),
-        const SizedBox(height: 16),
+
+        // Action bar khi có pending avatar
+        if (hasPending) ...[
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: vm.cancelPendingAvatar,
+                icon: const Icon(Icons.close, size: 16),
+                label: const Text('Hủy'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey.shade700,
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await vm.savePendingAvatar();
+                  if (mounted) {
+                    if (vm.errorMessage == null) {
+                      _showSnackBar('Cập nhật ảnh đại diện thành công ✓', success: true);
+                    } else {
+                      _showSnackBar(vm.errorMessage!, success: false);
+                    }
+                  }
+                },
+                icon: const Icon(Icons.save_alt, size: 16),
+                label: const Text('Lưu ảnh'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD32F2F),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Ảnh chưa được lưu – nhấn "Lưu ảnh" để xác nhận',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+          ),
+        ] else
+          const SizedBox(height: 16),
 
         // Full name
         Text(
@@ -322,7 +533,6 @@ class _ProfileViewState extends State<_ProfileView> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  // Icon Container
                   Container(
                     width: 42,
                     height: 42,
@@ -333,8 +543,6 @@ class _ProfileViewState extends State<_ProfileView> {
                     child: Icon(item.icon, color: item.iconColor, size: 22),
                   ),
                   const SizedBox(width: 16),
-
-                  // Label
                   Expanded(
                     child: Text(
                       item.label,
@@ -345,8 +553,6 @@ class _ProfileViewState extends State<_ProfileView> {
                       ),
                     ),
                   ),
-
-                  // Arrow
                   Icon(Icons.chevron_right_rounded,
                       color: Colors.grey.shade400, size: 22),
                 ],
@@ -398,7 +604,6 @@ class _ProfileViewState extends State<_ProfileView> {
       ),
     );
   }
-
 }
 
 // ─── Data model for menu items ────────────────────────────────────────────────

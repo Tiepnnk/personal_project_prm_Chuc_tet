@@ -10,6 +10,7 @@ class ContactCard extends StatelessWidget {
   final Contact contact;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onCall;
   
   /// Trạng thái chúc Tết lấy từ wish_records, null = chưa có record nào
   final WishStatus? wishStatus;
@@ -25,6 +26,7 @@ class ContactCard extends StatelessWidget {
     required this.contact,
     required this.onEdit,
     required this.onDelete,
+    this.onCall,
     this.wishStatus,
     this.isSelectionMode = false,
     this.isSelected = false,
@@ -264,18 +266,25 @@ class ContactCard extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
-                                ContactActionIcon(
-                                  icon: Icons.call,
-                                  color: const Color(0xFF10B981),
-                                  label: 'Gọi điện',
-                                  onTap: () {},
-                                ),
-                                ContactActionIcon(
-                                  icon: Icons.info_outline,
-                                  color: const Color(0xFF3B82F6),
-                                  label: 'Chi tiết',
-                                  onTap: () {},
-                                ),
+                                // Gọi điện: chỉ bật khi chưa gọi/nhắn
+                                if (wishStatus == null || wishStatus == WishStatus.pending)
+                                  ContactActionIcon(
+                                    icon: Icons.call,
+                                    color: const Color(0xFF10B981),
+                                    label: 'Gọi điện',
+                                    onTap: onCall ?? () {},
+                                  )
+                                else
+                                  ContactActionIcon(
+                                    icon: wishStatus == WishStatus.called
+                                        ? Icons.call
+                                        : Icons.message_outlined,
+                                    color: Colors.grey.shade400,
+                                    label: wishStatus == WishStatus.called
+                                        ? 'Đã gọi ✓'
+                                        : 'Đã nhắn ✓',
+                                    onTap: () {},  // disabled
+                                  ),
                                 ContactActionIcon(
                                   icon: Icons.edit_outlined,
                                   color: const Color(0xFFF59E0B),

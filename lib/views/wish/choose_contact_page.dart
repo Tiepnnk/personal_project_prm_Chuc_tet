@@ -243,7 +243,9 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
           return const Center(child: CircularProgressIndicator());
         }
         final contacts = vm.displayedContacts;
-        if (contacts.isEmpty) {
+        final activeCategory = vm.activeCategory;
+
+        if (contacts.isEmpty && activeCategory == null) {
           return Center(
             child: Text(
               'Không có liên lạc nào cần gọi.',
@@ -251,14 +253,76 @@ class _ChooseContactPageState extends State<ChooseContactPage> {
             ),
           );
         }
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          itemCount: contacts.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) =>
-              _buildContactCard(contacts[index], vm, widget.isMultiSelect),
+
+        return Column(
+          children: [
+            // Banner lọc mối quan hệ
+            if (activeCategory != null)
+              _buildRelationshipBanner(activeCategory),
+
+            // Danh sách contact
+            if (contacts.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'Không có liên lạc nào cần gọi.',
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  itemCount: contacts.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) =>
+                      _buildContactCard(contacts[index], vm, widget.isMultiSelect),
+                ),
+              ),
+          ],
         );
       },
+    );
+  }
+
+  Widget _buildRelationshipBanner(ContactCategory category) {
+    final info = _relationshipInfo(category);
+    final bgColor = (info['bgColor'] as Color);
+    final textColor = (info['textColor'] as Color);
+    final label = info['label'] as String;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: textColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.filter_list_rounded, size: 16, color: textColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Đang lọc theo mối quan hệ: $label',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ),
+          Text(
+            'Bỏ chọn để xem tất cả',
+            style: TextStyle(
+              fontSize: 11,
+              color: textColor.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -49,11 +49,8 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     setState(() => _loading = false);
     if (mounted) {
       if (vm.errorMessage == null) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          _snackBar('Cập nhật thông tin thành công ✓', success: true),
-        );
-        Navigator.pop(context);
+        // Pop trước, để snackbar hiện trên profile_page
+        Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(

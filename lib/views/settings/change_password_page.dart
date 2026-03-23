@@ -43,11 +43,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     setState(() => _loading = false);
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        _snackBar('Đổi mật khẩu thành công ✓', success: true),
-      );
-      Navigator.pop(context);
+      // Pop trước, để snackbar hiện trên profile_page
+      Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(

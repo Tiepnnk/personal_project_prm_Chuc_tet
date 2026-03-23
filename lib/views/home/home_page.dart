@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:personal_project_prm/viewmodels/home/home_viewmodel.dart';
 import 'package:personal_project_prm/views/widgets/falling_blossom_widget.dart';
 import 'package:personal_project_prm/views/widgets/lucky_money_widget.dart';
@@ -11,7 +10,6 @@ import 'package:personal_project_prm/views/home/widgets/quick_actions.dart';
 import 'package:personal_project_prm/views/home/widgets/priority_section.dart';
 import 'package:personal_project_prm/views/home/widgets/reminder_banner.dart';
 import 'package:personal_project_prm/views/widgets/app_bottom_nav.dart';
-import 'package:personal_project_prm/views/login/login_page.dart';
 import 'package:provider/provider.dart';
 
 /// Màn hình chính sau khi đăng nhập thành công
@@ -26,27 +24,12 @@ class _HomePageState extends State<HomePage> {
   // Biến cờ (flag) để cho phép bật/tắt hiệu ứng Tết nếu muốn
   bool _enableTetEffect = false;
 
-  final ImagePicker _picker = ImagePicker();
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeViewModel>().fetchCurrentUser();
     });
-  }
-
-  // Hàm chọn ảnh từ thư viện
-  Future<void> _pickImage(BuildContext context) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-          source: ImageSource.gallery);
-      if (pickedFile != null && context.mounted) {
-        await context.read<HomeViewModel>().updateAvatar(pickedFile.path);
-      }
-    } catch (e) {
-      debugPrint('Lỗi chọn ảnh: $e');
-    }
   }
 
   // Hàm hiển thị Popup xem ảnh Fullscreen
@@ -82,74 +65,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Hàm BottomSheet tuỳ chọn cho Avatar
-  void _showAvatarOptions(BuildContext context, String? avatarPath) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (bottomSheetContext) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const SizedBox(height: 20),
-              if (avatarPath != null) ...[
-                ListTile(
-                  leading: const Icon(
-                      Icons.remove_red_eye_rounded, color: Colors.blue),
-                  title: const Text('Xem ảnh đại diện',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  onTap: () {
-                    Navigator.pop(bottomSheetContext);
-                    _showImageFullScreen(context, avatarPath);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library, color: Colors.green),
-                  title: const Text('Đổi ảnh từ thư viện',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  onTap: () {
-                    Navigator.pop(bottomSheetContext);
-                    _pickImage(context);
-                  },
-                ),
-              ] else
-                ...[
-                  ListTile(
-                    leading: const Icon(
-                        Icons.photo_library, color: Colors.green),
-                    title: const Text('Chọn ảnh từ thư viện',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    onTap: () {
-                      Navigator.pop(bottomSheetContext);
-                      _pickImage(context);
-                    },
-                  ),
-                ],
-              ListTile(
-                leading: const Icon(Icons.cancel, color: Colors.red),
-                title: const Text('Huỷ', style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.red)),
-                onTap: () => Navigator.pop(bottomSheetContext),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _showLuckyMoneyDialog() {
     showDialog(
       context: context,
@@ -163,7 +78,6 @@ class _HomePageState extends State<HomePage> {
             children: [
               Image.network(
                 'https://cdn-icons-png.flaticon.com/512/5770/5770857.png',
-                // Icon Li Xi placeholder
                 height: 80,
                 errorBuilder: (_, __, ___) =>
                 const Icon(Icons.wallet_giftcard, size: 80, color: Colors.red),
@@ -207,7 +121,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF5), // Nền màu vàng kem nhạt
+      backgroundColor: const Color(0xFFFFFBF5),
       body: SafeArea(
         child: Stack(
           children: [
@@ -227,12 +141,10 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       HomeHeader(
                         viewModel: viewModel,
-                        onAvatarTap: (ctx, path) =>
-                            _showAvatarOptions(ctx, path),
-                        onLogout: (ctx) async {
-                          await viewModel.logout();
-                          if (ctx.mounted) {
-                            Navigator.pushReplacementNamed(ctx, '/login');
+                        onAvatarTap: (ctx, path) {
+                          // Chỉ xem fullscreen nếu có ảnh
+                          if (path != null && path.isNotEmpty) {
+                            _showImageFullScreen(ctx, path);
                           }
                         },
                       ),
@@ -276,4 +188,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-

@@ -42,6 +42,31 @@ class ContactViewModel extends ChangeNotifier {
   /// Lấy WishStatus của một contact trong năm nay, null nếu chưa có record
   WishStatus? getWishStatus(String contactId) => _wishStatusMap[contactId];
 
+  /// Danh sách đã nhóm theo chữ cái đầu của tên (A-Z, # cho số/ký tự đặc biệt)
+  Map<String, List<Contact>> get groupedContacts {
+    final map = <String, List<Contact>>{};
+    for (final contact in _filteredContacts) {
+      final name = contact.fullName.trim();
+      final firstChar = name.isNotEmpty ? name[0].toUpperCase() : '#';
+      // Phân biệt chữ cái Latin vs ký tự khác
+      final key = RegExp(r'[A-ZÀ-ɏ]').hasMatch(firstChar) ? firstChar : '#';
+      map.putIfAbsent(key, () => []).add(contact);
+    }
+    // Sắp xếp key A-Z, # luôn ở cuối
+    final sorted = Map.fromEntries(
+      (map.entries.toList()
+        ..sort((a, b) {
+          if (a.key == '#') return 1;
+          if (b.key == '#') return -1;
+          return a.key.compareTo(b.key);
+        }))
+    );
+    return sorted;
+  }
+
+  /// Danh sách chữ cái có trong danh sách hiện tại (dùng cho side bar)
+  List<String> get availableLetters => groupedContacts.keys.toList();
+
   // Categories based on UI
   final List<String> categories = [
     'Tất cả',
@@ -198,7 +223,9 @@ class ContactViewModel extends ChangeNotifier {
       }
 
       return matchesCategory && matchesSearch;
-    }).toList();
+    }).toList()
+      // Sắp xếp A-Z theo tên (phân biệt chữ cái tiếng Việt)
+      ..sort((a, b) => a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
   }
 
   /// Helper to convert DB category to UI Vietnamese category

@@ -40,6 +40,7 @@ class WishViewModel extends ChangeNotifier {
   List<Contact> _allPendingContacts = [];
   String _contactSearchQuery = '';
   String _contactPriorityFilter = 'Tất cả'; // 'Tất cả' | 'MUST' | 'SHOULD' | 'OPTION'
+  ContactCategory? _activeCategory; // Mối quan hệ đang được khoá khi chọn người đầu tiên
 
   // Templates tab state
   List<WishTemplate> _allTemplates = [];
@@ -66,6 +67,7 @@ class WishViewModel extends ChangeNotifier {
   bool get isLoadingTemplates => _isLoadingTemplates;
   String? get errorMessage => _errorMessage;
   String get contactPriorityFilter => _contactPriorityFilter;
+  ContactCategory? get activeCategory => _activeCategory;
   bool get isGeneratingAi => _isGeneratingAi;
   String? get aiError => _aiError;
   String get contactSearchQuery => _contactSearchQuery;
@@ -73,6 +75,11 @@ class WishViewModel extends ChangeNotifier {
 
   List<Contact> get displayedContacts {
     var result = _allPendingContacts;
+
+    // Filter theo mối quan hệ khi đã có lựa chọn đầu tiên
+    if (_activeCategory != null) {
+      result = result.where((c) => c.category == _activeCategory).toList();
+    }
 
     // Filter theo priority chip
     if (_contactPriorityFilter != 'Tất cả') {
@@ -167,6 +174,7 @@ class WishViewModel extends ChangeNotifier {
       if (_selectedContacts.isEmpty) {
         _selectedContact = null;
         _selectedTemplate = null;
+        _activeCategory = null; // Reset khoá mối quan hệ
         contentController.clear();
       } else {
         _selectedContact = _selectedContacts.first;
@@ -177,6 +185,7 @@ class WishViewModel extends ChangeNotifier {
     }
     _selectedContact = contact;
     _selectedContacts = [contact];
+    _activeCategory = contact.category; // Khoá danh sách theo mối quan hệ đầu tiên
     // Reset template và content khi đổi contact
     _selectedTemplate = null;
     contentController.clear();
@@ -188,22 +197,21 @@ class WishViewModel extends ChangeNotifier {
     if (_selectedContacts.isEmpty) {
       _selectedContacts.add(contact);
       _selectedContact = contact;
+      _activeCategory = contact.category; // Khoá danh sách theo mối quan hệ đầu tiên
     } else {
       if (_selectedContacts.any((c) => c.id == contact.id)) {
         _selectedContacts.removeWhere((c) => c.id == contact.id);
         if (_selectedContacts.isEmpty) {
           _selectedContact = null;
           _selectedTemplate = null;
+          _activeCategory = null; // Reset khoá mối quan hệ
           contentController.clear();
         } else {
           _selectedContact = _selectedContacts.first;
         }
       } else {
-        if (contact.category.displayName != bulkRelationship) {
-          return;
-          // throw Exception(
-          //     // 'Chỉ chọn cùng mối quan hệ ($bulkRelationship)'
-          // );
+        if (contact.category != _activeCategory) {
+          return; // Không thuộc cùng mối quan hệ → bỏ qua
         }
         _selectedContacts.add(contact);
       }
@@ -217,6 +225,7 @@ class WishViewModel extends ChangeNotifier {
     _selectedContact = null;
     _selectedContacts.clear();
     _selectedTemplate = null;
+    _activeCategory = null; // Reset khoá mối quan hệ
     contentController.clear();
     _activeRecord = null;
     notifyListeners();
