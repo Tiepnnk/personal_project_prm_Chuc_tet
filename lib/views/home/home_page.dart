@@ -22,7 +22,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   // Biến cờ (flag) để cho phép bật/tắt hiệu ứng Tết nếu muốn
-  bool _enableTetEffect = false;
+  bool _enableTetEffect = true;
 
   @override
   void initState() {
@@ -76,11 +76,12 @@ class _HomePageState extends State<HomePage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.network(
-                'https://cdn-icons-png.flaticon.com/512/5770/5770857.png',
-                height: 80,
-                errorBuilder: (_, __, ___) =>
-                const Icon(Icons.wallet_giftcard, size: 80, color: Colors.red),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(36),
+                child: Image.asset(
+                  'assets/images/logo_tet.jpg',
+                  height: 80,
+                ),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -155,7 +156,7 @@ class _HomePageState extends State<HomePage> {
                       const QuickActions(),
                       const SizedBox(height: 32),
                       const PrioritySection(),
-                      const ReminderBanner(),
+                      ReminderBanner(pendingCount: viewModel.pendingCount),
                       const SizedBox(height: 32),
                       Center(
                         child: Text(

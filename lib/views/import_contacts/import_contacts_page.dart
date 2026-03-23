@@ -295,7 +295,7 @@ class _ImportContactsView extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                     )
                   : Text(
-                      'Import ${vm.totalImportCount - 1} liên hệ (${vm.assignedCount}/${vm.newContacts.length} đã gán)',
+                      'Import ${vm.totalImportCount} liên hệ (${vm.assignedCount}/${vm.newContacts.length} đã gán)',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
             ),

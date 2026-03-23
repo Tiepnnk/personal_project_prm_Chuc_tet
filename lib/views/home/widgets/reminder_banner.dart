@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ReminderBanner extends StatelessWidget {
-  const ReminderBanner({super.key});
+  final int pendingCount;
+  const ReminderBanner({super.key, required this.pendingCount});
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +66,7 @@ class ReminderBanner extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Hoàn thành 35 lời chúc còn lại để đón Tết trọn vẹn.',
+                'Hoàn thành $pendingCount lời chúc còn lại để đón Tết trọn vẹn.',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.9),
                   fontSize: 13,

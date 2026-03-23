@@ -43,7 +43,7 @@ class _LuckyMoneyWidgetState extends State<LuckyMoneyWidget>
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 120, // Cách mép dưới (tránh đè BottomNavigationBar)
+      bottom: 120,     // Nằm ở đầu trang
       right: 20,   // Nằm góc bên phải
       child: GestureDetector(
         onTap: () {

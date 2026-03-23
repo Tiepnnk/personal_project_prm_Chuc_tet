@@ -38,7 +38,7 @@ class AboutPage extends StatelessWidget {
                 iconColor: const Color(0xFF1976D2),
                 iconBg: const Color(0xFFE3F0FF),
                 label: 'Ngày phát hành',
-                value: '15/03/2026',
+                value: '24/03/2026',
               ),
             ]),
             const SizedBox(height: 20),
@@ -52,7 +52,7 @@ class AboutPage extends StatelessWidget {
                 iconColor: const Color(0xFF7B61FF),
                 iconBg: const Color(0xFFEDE8FF),
                 label: 'Tên ứng dụng',
-                value: 'Personal Project PRM',
+                value: 'Quản lý Lời Chúc Tết',
               ),
               _divider(),
               _buildDescriptionTile(
@@ -105,7 +105,7 @@ class AboutPage extends StatelessWidget {
                 iconColor: _red,
                 iconBg: const Color(0xFFFFEDE8),
                 label: 'Phát triển bởi',
-                value: 'PRM Team',
+                value: 'Tiepnnk',
               ),
               _divider(),
               _buildInfoTile(
@@ -163,29 +163,16 @@ class AboutPage extends StatelessWidget {
     return Center(
       child: Column(
         children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFEDE8), Color(0xFFFFF3E0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withValues(alpha: 0.15),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(72),
+            child: Image.asset(
+              'assets/images/logo_tet.jpg',
+              height: 120,
             ),
-            child: const Icon(Icons.spa_rounded, size: 48, color: _red),
           ),
           const SizedBox(height: 12),
           const Text(
-            'Personal Project PRM',
+            'Quản lý Lời Chúc Tết',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,

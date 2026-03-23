@@ -277,28 +277,29 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ],
           // Link Quên mật khẩu
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Chức năng đang được phát triển!'),
-                    backgroundColor: Color(0xFFFF8F00),
-                  ),
-                );
-              },
-              child: Text(
-                'Quên mật khẩu?',
-                style: TextStyle(
-                  color: redTet,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Align(
+          //   alignment: Alignment.centerRight,
+          //   child: TextButton(
+          //     onPressed: () {
+          //       ScaffoldMessenger.of(context).showSnackBar(
+          //         const SnackBar(
+          //           content: Text('Chức năng đang được phát triển!'),
+          //           backgroundColor: Color(0xFFFF8F00),
+          //         ),
+          //       );
+          //     },
+          //     child:
+          //     Text(
+          //       'Quên mật khẩu?',
+          //       style: TextStyle(
+          //         color: redTet,
+          //         fontWeight: FontWeight.w600,
+          //         fontSize: 14,
+          //       ),
+          //     ),
+          //   ),
+          // ),
+          const SizedBox(height: 32),
 
           // Nút Đăng nhập
           _buildLoginButton(vm, redTet, yellowTet),
